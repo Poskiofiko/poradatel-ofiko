@@ -152,22 +152,32 @@ export default function EmbedPage({
       <PublicHead title={`${embed.slug} | Ofiko Poradatel`} />
 
       <main className="embed-page">
-        <iframe
-          className={`embed-frame ${embed.renderMode === 'display' ? 'embed-frame--display' : ''}`}
-          src={embed.url}
-          title={embed.slug}
-          allow="clipboard-read; clipboard-write"
-          sandbox={
-            embed.renderMode === 'display'
-              ? 'allow-same-origin allow-scripts'
-              : undefined
-          }
-          loading="eager"
-          onLoad={() => {
-            setHasLoaded(true)
-            setShowFallback(false)
-          }}
-        />
+        <div className={`embed-frame-shell ${embed.renderMode === 'display' ? 'embed-frame-shell--display' : ''}`}>
+          <iframe
+            className={`embed-frame ${embed.renderMode === 'display' ? 'embed-frame--display' : ''}`}
+            src={embed.url}
+            title={embed.slug}
+            allow="clipboard-read; clipboard-write"
+            sandbox={
+              embed.renderMode === 'display'
+                ? 'allow-same-origin allow-scripts'
+                : undefined
+            }
+            loading="eager"
+            onLoad={() => {
+              setHasLoaded(true)
+              setShowFallback(false)
+            }}
+          />
+          {embed.renderMode === 'display' ? (
+            <div className="embed-display-guard" aria-hidden="true">
+              <div className="embed-display-guard__badge">
+                <span className="material-icons">visibility</span>
+                Zobrazovaci rezim
+              </div>
+            </div>
+          ) : null}
+        </div>
 
         {showFallback ? (
           <div className="embed-fallback">

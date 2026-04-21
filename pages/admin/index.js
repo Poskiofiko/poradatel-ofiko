@@ -18,6 +18,32 @@ function formatDate(value) {
   return new Date(value).toLocaleString('cs-CZ')
 }
 
+function getHostname(value) {
+  try {
+    return new URL(value).hostname.replace(/^www\./, '')
+  } catch {
+    return value
+  }
+}
+
+function sanitizeDraftSlug(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .replace(/-{2,}/g, '-')
+}
+
+function isHttpsUrl(value) {
+  try {
+    const parsed = new URL(value)
+    return parsed.protocol === 'https:'
+  } catch {
+    return false
+  }
+}
+
 function LoginView({ error }) {
   return (
     <section className="panel auth-panel">
@@ -201,7 +227,9 @@ function RecordCard({
   onAction,
   pendingAction,
 }) {
+  const [expanded, setExpanded] = useState(false)
   const publicUrl = `${baseUrl}/${embed.slug}`
+  const hostname = getHostname(embed.url)
   const confirmDelete =
     'Opravdu chces tenhle odkaz smazat? Tohle nejde vratit zpet.'
   const confirmArchive = embed.archived
@@ -232,201 +260,205 @@ function RecordCard({
       </div>
 
       <div className="record-main">
-        <div className="record-top">
-          <div>
-            <p className="embed-label">Verejna adresa</p>
+        <div className="record-summary">
+          <div className="record-summary__primary">
+            <p className="record-slug">{embed.slug}</p>
             <Link className="record-url" href={`/${embed.slug}`}>
               {publicUrl}
             </Link>
+            <p className="record-muted record-source">{hostname}</p>
+          </div>
+
+          <div className="record-summary__meta">
             <div className="record-badges">
               <Badge tone={embed.renderMode === 'display' ? 'default' : 'muted'}>
-                {embed.renderMode === 'display' ? 'Zobrazovaci rezim' : 'Standardni rezim'}
+                {embed.renderMode === 'display' ? 'Zobrazovaci' : 'Standardni'}
               </Badge>
               <Badge tone={embed.passwordProtected ? 'brand' : 'muted'}>
-                {embed.passwordProtected ? 'Chraneno heslem' : 'Bez hesla'}
+                {embed.passwordProtected ? 'Heslo' : 'Bez hesla'}
               </Badge>
               <Badge tone={embed.archived ? 'muted' : 'success'}>
-                {embed.archived ? 'Archivovano' : 'Aktivni'}
+                {embed.archived ? 'Archiv' : 'Aktivni'}
               </Badge>
               <Badge tone={embed.isEnabled ? 'success' : 'warning'}>
-                {embed.isEnabled ? 'Povoleno' : 'Vypnuto'}
+                {embed.isEnabled ? 'Zapnuto' : 'Vypnuto'}
               </Badge>
-              {embed.expiresAt ? (
-                <Badge
-                  tone={
-                    new Date(embed.expiresAt).getTime() < Date.now()
-                      ? 'danger'
-                      : 'muted'
-                  }
-                >
-                  {new Date(embed.expiresAt).getTime() < Date.now()
-                    ? 'Expirovano'
-                    : `Expirace ${new Date(embed.expiresAt).toLocaleDateString('cs-CZ')}`}
-                </Badge>
-              ) : null}
               {embed.category ? <Badge tone="default">{embed.category}</Badge> : null}
             </div>
-          </div>
-
-          <div className="record-quick-actions">
-            <CopyButton value={publicUrl} label="Kopirovat verejnou URL" />
-            <CopyButton value={embed.url} label="Kopirovat cilovou URL" />
-          </div>
-        </div>
-
-        <div className="record-grid">
-          <div>
-            <p className="embed-label">Cilova URL</p>
-            <p className="record-muted">{embed.url}</p>
-          </div>
-          <div>
-            <p className="embed-label">Statistiky</p>
-            <p className="record-muted">
-              Otevreni: <strong>{embed.viewCount}</strong>
-            </p>
-            <p className="record-muted">Naposledy otevreno: {formatDate(embed.lastViewedAt)}</p>
-          </div>
-          <div>
-            <p className="embed-label">Cas</p>
-            <p className="record-muted">Vytvoreno: {formatDate(embed.createdAt)}</p>
             <p className="record-muted">Upraveno: {formatDate(embed.updatedAt)}</p>
+            <p className="record-muted">Otevreni: {embed.viewCount}</p>
           </div>
-          <div>
-            <p className="embed-label">Tagy</p>
-            <div className="tag-row">
-              {embed.tags.length > 0 ? (
-                embed.tags.map((tag) => (
-                  <span key={tag} className="tag-chip">
-                    {tag}
-                  </span>
-                ))
-              ) : (
-                <span className="record-muted">Bez tagu</span>
-              )}
-            </div>
+
+          <div className="record-summary__actions">
+            <button
+              className="button button-secondary"
+              type="button"
+              onClick={() => setExpanded((current) => !current)}
+            >
+              {expanded ? 'Skryt detail' : 'Detail'}
+            </button>
+            <a className="button button-secondary" href={publicUrl} target="_blank" rel="noreferrer">
+              Nahled
+            </a>
           </div>
         </div>
 
-        {embed.note ? (
-          <div className="record-note">
-            <p className="embed-label">Poznamka</p>
-            <p className="record-muted">{embed.note}</p>
-          </div>
-        ) : null}
-
-        {embed.auditLog?.length > 0 ? (
-          <div className="record-audit">
-            <p className="embed-label">Posledni zmeny</p>
-            <div className="audit-list">
-              {embed.auditLog.slice(0, 3).map((entry) => (
-                <p className="record-muted" key={`${entry.at}-${entry.action}`}>
-                  <strong>{entry.action}</strong> · {formatDate(entry.at)} · {entry.detail}
-                </p>
-              ))}
+        {expanded ? (
+          <>
+            <div className="record-grid">
+              <div>
+                <p className="embed-label">Cilova URL</p>
+                <p className="record-muted">{embed.url}</p>
+              </div>
+              <div>
+                <p className="embed-label">Statistiky</p>
+                <p className="record-muted">Otevreni: <strong>{embed.viewCount}</strong></p>
+                <p className="record-muted">Naposledy otevreno: {formatDate(embed.lastViewedAt)}</p>
+              </div>
+              <div>
+                <p className="embed-label">Cas</p>
+                <p className="record-muted">Vytvoreno: {formatDate(embed.createdAt)}</p>
+                <p className="record-muted">Upraveno: {formatDate(embed.updatedAt)}</p>
+              </div>
+              <div>
+                <p className="embed-label">Tagy</p>
+                <div className="tag-row">
+                  {embed.tags.length > 0 ? (
+                    embed.tags.map((tag) => (
+                      <span key={tag} className="tag-chip">
+                        {tag}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="record-muted">Bez tagu</span>
+                  )}
+                </div>
+              </div>
             </div>
-          </div>
+
+            {embed.note ? (
+              <div className="record-note">
+                <p className="embed-label">Poznamka</p>
+                <p className="record-muted">{embed.note}</p>
+              </div>
+            ) : null}
+
+            {embed.auditLog?.length > 0 ? (
+              <div className="record-audit">
+                <p className="embed-label">Posledni zmeny</p>
+                <div className="audit-list">
+                  {embed.auditLog.slice(0, 3).map((entry) => (
+                    <p className="record-muted" key={`${entry.at}-${entry.action}`}>
+                      <strong>{entry.action}</strong> · {formatDate(entry.at)} · {entry.detail}
+                    </p>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            <div className="record-quick-actions">
+              <CopyButton value={publicUrl} label="Kopirovat verejnou URL" />
+              <CopyButton value={embed.url} label="Kopirovat cilovou URL" />
+            </div>
+
+            <div className="record-actions">
+              <Link
+                className="button button-secondary"
+                href={`/admin?slug=${encodeURIComponent(embed.slug)}&url=${encodeURIComponent(
+                  embed.url
+                )}&protected=${embed.passwordProtected ? '1' : '0'}&category=${encodeURIComponent(
+                  embed.category || ''
+                )}&note=${encodeURIComponent(embed.note || '')}&tags=${encodeURIComponent(
+                  embed.tags.join(', ')
+                )}&renderMode=${encodeURIComponent(embed.renderMode || 'standard')}&expiresAt=${encodeURIComponent(
+                  embed.expiresAt || ''
+                )}&enabled=${
+                  embed.isEnabled ? '1' : '0'
+                }`}
+              >
+                Upravit
+              </Link>
+
+              <button
+                className="button button-secondary"
+                type="button"
+                disabled={isBusy}
+                onClick={() => runAction('duplicate', { slug: embed.slug, view: currentView })}
+              >
+                {pendingAction === 'duplicate' ? 'Duplikuji...' : 'Duplikovat'}
+              </button>
+
+              <a className="button button-secondary" href={embed.url} target="_blank" rel="noreferrer">
+                Otevrit cil
+              </a>
+
+              <button
+                className="button button-secondary"
+                type="button"
+                disabled={isBusy}
+                onClick={() =>
+                  runAction(
+                    'archive',
+                    {
+                      slug: embed.slug,
+                      archived: embed.archived ? '0' : '1',
+                      view: currentView,
+                    },
+                    confirmArchive
+                  )
+                }
+              >
+                {pendingAction === 'archive'
+                  ? embed.archived
+                    ? 'Obnovuji...'
+                    : 'Archivuji...'
+                  : embed.archived
+                    ? 'Obnovit'
+                    : 'Archivovat'}
+              </button>
+
+              <button
+                className="button button-secondary"
+                type="button"
+                disabled={isBusy}
+                onClick={() =>
+                  runAction(
+                    'toggle',
+                    {
+                      slug: embed.slug,
+                      isEnabled: embed.isEnabled ? '0' : '1',
+                      view: currentView,
+                    },
+                    confirmEnable
+                  )
+                }
+              >
+                {pendingAction === 'toggle'
+                  ? embed.isEnabled
+                    ? 'Vypinam...'
+                    : 'Zapinam...'
+                  : embed.isEnabled
+                    ? 'Vypnout'
+                    : 'Zapnout'}
+              </button>
+
+              <button
+                className="button button-danger"
+                type="button"
+                disabled={isBusy}
+                onClick={() =>
+                  runAction(
+                    'delete',
+                    { slug: embed.slug, view: currentView },
+                    confirmDelete
+                  )
+                }
+              >
+                {pendingAction === 'delete' ? 'Mazani...' : 'Smazat'}
+              </button>
+            </div>
+          </>
         ) : null}
-
-        <div className="record-actions">
-          <Link
-            className="button button-secondary"
-            href={`/admin?slug=${encodeURIComponent(embed.slug)}&url=${encodeURIComponent(
-              embed.url
-            )}&protected=${embed.passwordProtected ? '1' : '0'}&category=${encodeURIComponent(
-              embed.category || ''
-            )}&note=${encodeURIComponent(embed.note || '')}&tags=${encodeURIComponent(
-              embed.tags.join(', ')
-            )}&renderMode=${encodeURIComponent(embed.renderMode || 'standard')}&expiresAt=${encodeURIComponent(
-              embed.expiresAt || ''
-            )}&enabled=${
-              embed.isEnabled ? '1' : '0'
-            }`}
-          >
-            Upravit
-          </Link>
-
-          <button
-            className="button button-secondary"
-            type="button"
-            disabled={isBusy}
-            onClick={() => runAction('duplicate', { slug: embed.slug, view: currentView })}
-          >
-            {pendingAction === 'duplicate' ? 'Duplikuji...' : 'Duplikovat'}
-          </button>
-
-          <a className="button button-secondary" href={publicUrl} target="_blank" rel="noreferrer">
-            Nahled
-          </a>
-
-          <a className="button button-secondary" href={embed.url} target="_blank" rel="noreferrer">
-            Otevrit cil
-          </a>
-
-          <button
-            className="button button-secondary"
-            type="button"
-            disabled={isBusy}
-            onClick={() =>
-              runAction(
-                'archive',
-                {
-                  slug: embed.slug,
-                  archived: embed.archived ? '0' : '1',
-                  view: currentView,
-                },
-                confirmArchive
-              )
-            }
-          >
-            {pendingAction === 'archive'
-              ? embed.archived
-                ? 'Obnovuji...'
-                : 'Archivuji...'
-              : embed.archived
-                ? 'Obnovit'
-                : 'Archivovat'}
-          </button>
-
-          <button
-            className="button button-secondary"
-            type="button"
-            disabled={isBusy}
-            onClick={() =>
-              runAction(
-                'toggle',
-                {
-                  slug: embed.slug,
-                  isEnabled: embed.isEnabled ? '0' : '1',
-                  view: currentView,
-                },
-                confirmEnable
-              )
-            }
-          >
-            {pendingAction === 'toggle'
-              ? embed.isEnabled
-                ? 'Vypinam...'
-                : 'Zapinam...'
-              : embed.isEnabled
-                ? 'Vypnout'
-                : 'Zapnout'}
-          </button>
-
-          <button
-            className="button button-danger"
-            type="button"
-            disabled={isBusy}
-            onClick={() =>
-              runAction(
-                'delete',
-                { slug: embed.slug, view: currentView },
-                confirmDelete
-              )
-            }
-          >
-            {pendingAction === 'delete' ? 'Mazani...' : 'Smazat'}
-          </button>
-        </div>
       </div>
     </article>
   )
@@ -520,6 +552,8 @@ function DashboardView({
   const [pendingMap, setPendingMap] = useState({})
   const [bulkPending, setBulkPending] = useState(false)
   const [savePending, setSavePending] = useState(false)
+  const [draftSlug, setDraftSlug] = useState(initialSlug)
+  const [draftUrl, setDraftUrl] = useState(initialUrl)
   const [toasts, setToasts] = useState([])
   const [activity, setActivity] = useState({
     tone: 'idle',
@@ -538,6 +572,13 @@ function DashboardView({
       (embed) => embed.expiresAt && new Date(embed.expiresAt).getTime() < Date.now()
     ).length,
   }
+
+  const normalizedDraftSlug = sanitizeDraftSlug(draftSlug)
+  const slugTaken = items.some(
+    (embed) => embed.slug === normalizedDraftSlug && embed.slug !== initialSlug
+  )
+  const targetUrlValid = !draftUrl || isHttpsUrl(draftUrl)
+  const quickDomain = draftUrl ? getHostname(draftUrl) : ''
 
   let filtered = items.filter((embed) => {
     if (view === 'active' && embed.archived) {
@@ -559,6 +600,9 @@ function DashboardView({
       embed.category,
       embed.note,
       embed.tags.join(' '),
+      Array.isArray(embed.auditLog)
+        ? embed.auditLog.map((entry) => `${entry.action} ${entry.detail}`).join(' ')
+        : '',
     ]
       .join(' ')
       .toLowerCase()
@@ -1011,6 +1055,19 @@ function DashboardView({
 
           <form className="stack" method="post" action="/api/admin/embeds" onSubmit={handleSave}>
             <input type="hidden" name="view" value={view} />
+            <div className="editor-status-bar">
+              <span className={`editor-status-pill ${slugTaken ? 'editor-status-pill--danger' : 'editor-status-pill--success'}`}>
+                {slugTaken
+                  ? 'Slug je uz obsazeny'
+                  : normalizedDraftSlug
+                    ? `Slug bude ${normalizedDraftSlug}`
+                    : 'Zadej slug'}
+              </span>
+              <span className={`editor-status-pill ${targetUrlValid ? 'editor-status-pill--default' : 'editor-status-pill--danger'}`}>
+                {draftUrl ? (targetUrlValid ? `Cil: ${quickDomain}` : 'URL musi byt platna HTTPS adresa') : 'Zadej cilovou URL'}
+              </span>
+            </div>
+
             <label className="field">
               <span>Slug</span>
               <input
@@ -1018,7 +1075,8 @@ function DashboardView({
                 type="text"
                 placeholder="sobotalibcice"
                 pattern="[a-z0-9-]+"
-                defaultValue={initialSlug}
+                value={draftSlug}
+                onChange={(event) => setDraftSlug(event.target.value)}
                 required
               />
             </label>
@@ -1029,7 +1087,8 @@ function DashboardView({
                 name="url"
                 rows="4"
                 placeholder="https://public.levitio.com/events/..."
-                defaultValue={initialUrl}
+                value={draftUrl}
+                onChange={(event) => setDraftUrl(event.target.value)}
                 required
               />
             </label>
@@ -1112,7 +1171,11 @@ function DashboardView({
               ztizi klikani nebo akce uvnitr, ale u cizich webu to nemusi byt na 100 % stejne.
             </p>
 
-            <button className="button button-primary" type="submit" disabled={savePending}>
+            <button
+              className="button button-primary"
+              type="submit"
+              disabled={savePending || slugTaken || !targetUrlValid}
+            >
               {savePending ? 'Ukladam...' : 'Ulozit odkaz'}
             </button>
           </form>

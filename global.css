@@ -820,6 +820,39 @@ h2 {
   background: #f7f9fc;
 }
 
+.embed-frame-shell {
+  position: relative;
+  min-height: 100vh;
+}
+
+.embed-display-guard {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background: transparent;
+  cursor: not-allowed;
+}
+
+.embed-display-guard__badge {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border-radius: 999px;
+  background: rgba(17, 24, 39, 0.82);
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 700;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.2);
+}
+
+.embed-display-guard__badge .material-icons {
+  font-size: 18px;
+}
+
 .embed-fallback {
   position: fixed;
   right: 18px;
@@ -1600,11 +1633,11 @@ body {
 }
 
 .admin-shell-app .summary-grid {
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .admin-shell-app .summary-card {
-  min-height: 92px;
+  min-height: 82px;
   border-radius: 10px;
   background: #fff;
   border: 1px solid #e3e8ee;
@@ -1650,6 +1683,39 @@ body {
   border-color: #e1e6ee;
 }
 
+.editor-status-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.editor-status-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: #eef2f6;
+  color: #61758e;
+  font-size: 0.84rem;
+  font-weight: 600;
+}
+
+.editor-status-pill--success {
+  background: #e3f5e8;
+  color: #2f7d43;
+}
+
+.editor-status-pill--danger {
+  background: #ffe2de;
+  color: #b13f4a;
+}
+
+.editor-status-pill--default {
+  background: #eef3fb;
+  color: #426995;
+}
+
 .admin-shell-app .field span {
   color: #61758e;
   font-size: 0.82rem;
@@ -1667,6 +1733,7 @@ body {
 }
 
 .admin-shell-app .records-table-head {
+  display: none;
   grid-template-columns: 52px 2.3fr 1.05fr 1fr 1fr 1.5fr;
   padding: 11px 16px;
   color: #8392a7;
@@ -1674,7 +1741,7 @@ body {
 }
 
 .admin-shell-app .record-card {
-  padding: 14px 16px;
+  padding: 12px 14px;
   border-radius: 0;
   border-bottom: 1px solid #ebeff4;
   box-shadow: none;
@@ -1693,11 +1760,43 @@ body {
 }
 
 .admin-shell-app .record-main {
-  gap: 12px;
+  gap: 10px;
+}
+
+.record-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(220px, 1fr) auto;
+  gap: 14px;
+  align-items: start;
+}
+
+.record-summary__primary,
+.record-summary__meta {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.record-summary__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.record-slug {
+  margin: 0;
+  font-size: 1.02rem;
+  font-weight: 700;
+  color: #253a5e;
+}
+
+.record-source {
+  margin: 0;
 }
 
 .admin-shell-app .record-top {
-  gap: 14px;
+  gap: 10px;
 }
 
 .admin-shell-app .record-url {
@@ -1709,6 +1808,7 @@ body {
 .admin-shell-app .record-grid {
   gap: 14px 18px;
   grid-template-columns: repeat(4, minmax(0, 1fr));
+  padding-top: 14px;
 }
 
 .admin-shell-app .record-muted {
@@ -1765,6 +1865,32 @@ body {
 
 .admin-shell-app .toast {
   border-radius: 10px;
+}
+
+.admin-shell-app .record-actions,
+.admin-shell-app .record-quick-actions {
+  gap: 8px;
+}
+
+.admin-shell-app .record-note,
+.admin-shell-app .record-audit {
+  padding: 0;
+}
+
+.admin-shell-app .toolbar-panel {
+  padding-top: 16px;
+  padding-bottom: 16px;
+}
+
+.admin-shell-app .dashboard-top {
+  padding-top: 20px;
+  padding-bottom: 20px;
+}
+
+.admin-shell-app .dashboard-top p.muted,
+.admin-shell-app .activity-banner p,
+.admin-shell-app .bulk-bar p {
+  font-size: 0.94rem;
 }
 
 :root[data-theme='dark'] {
@@ -1844,9 +1970,33 @@ body {
   border-color: #5ea2ff;
 }
 
+:root[data-theme='dark'] .editor-status-pill {
+  background: #2a3442;
+  color: #b3c1d1;
+}
+
+:root[data-theme='dark'] .editor-status-pill--success {
+  background: #22392a;
+  color: #8bd3a4;
+}
+
+:root[data-theme='dark'] .editor-status-pill--danger {
+  background: #452d31;
+  color: #ffb5bd;
+}
+
+:root[data-theme='dark'] .editor-status-pill--default {
+  background: #24364a;
+  color: #9dc5f0;
+}
+
 @media (max-width: 1180px) {
   .admin-shell-app .summary-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .record-summary {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -1871,6 +2021,10 @@ body {
 
   .admin-shell-app .summary-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .record-summary__actions {
+    justify-content: flex-start;
   }
 }
 
