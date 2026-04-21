@@ -14,6 +14,22 @@
   --shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
 }
 
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #09111f;
+  --bg-accent: #11192b;
+  --surface: rgba(11, 18, 32, 0.88);
+  --surface-strong: #10192b;
+  --text: #edf3ff;
+  --muted: #9fb1cb;
+  --line: rgba(159, 177, 203, 0.14);
+  --brand: #8e93ff;
+  --brand-dark: #67b3ff;
+  --danger: #ff8a7a;
+  --success: #52c78c;
+  --shadow: 0 16px 48px rgba(0, 0, 0, 0.34);
+}
+
 * {
   box-sizing: border-box;
 }
@@ -84,6 +100,10 @@ code {
   background: rgba(90, 71, 204, 0.08);
   border-radius: 0.35rem;
   padding: 0.15rem 0.35rem;
+}
+
+:root[data-theme='dark'] code {
+  background: rgba(142, 147, 255, 0.18);
 }
 
 .shell {
@@ -434,6 +454,21 @@ h2 {
   border-radius: 999px;
   background: var(--brand);
   animation: pulse-dot 1.3s ease-in-out infinite;
+}
+
+.progress-strip {
+  height: 10px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(90, 71, 204, 0.12);
+  border: 1px solid var(--line);
+}
+
+.progress-strip__bar {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--brand), var(--brand-dark));
+  transition: width 220ms ease;
 }
 
 .dashboard-top {

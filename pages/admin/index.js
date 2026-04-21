@@ -94,6 +94,28 @@ function ActivityBanner({ text, detail, tone = 'idle' }) {
   )
 }
 
+function ThemeToggle() {
+  const [theme, setTheme] = useState('light')
+
+  useEffect(() => {
+    const current = document.documentElement.dataset.theme || 'light'
+    setTheme(current)
+  }, [])
+
+  function toggleTheme() {
+    const next = theme === 'dark' ? 'light' : 'dark'
+    setTheme(next)
+    document.documentElement.dataset.theme = next
+    window.localStorage.setItem('ofiko-theme', next)
+  }
+
+  return (
+    <button className="button button-secondary" type="button" onClick={toggleTheme}>
+      {theme === 'dark' ? 'Svetly rezim' : 'Dark mode'}
+    </button>
+  )
+}
+
 function CopyButton({ value, label }) {
   const [copied, setCopied] = useState(false)
 
@@ -446,6 +468,7 @@ function DashboardView({
     text: 'Dashboard je pripraveny',
     detail: 'Muzes hledat, upravovat, archivovat nebo vytvaret nove odkazy.',
   })
+  const [progress, setProgress] = useState(0)
 
   const summary = {
     total: items.length,
@@ -510,6 +533,29 @@ function DashboardView({
     setStatusError('')
   }
 
+  async function verifySavedLink(slug) {
+    const startedAt = Date.now()
+
+    while (Date.now() - startedAt < 12000) {
+      const check = await fetch(`/api/admin/verify?slug=${encodeURIComponent(slug)}&_=${Date.now()}`, {
+        headers: { 'x-admin-json': '1' },
+        cache: 'no-store',
+      })
+
+      const publicCheck = await fetch(`/${encodeURIComponent(slug)}?_verify=${Date.now()}`, {
+        cache: 'no-store',
+      })
+
+      if (check.ok && publicCheck.ok) {
+        return true
+      }
+
+      await new Promise((resolve) => window.setTimeout(resolve, 900))
+    }
+
+    return false
+  }
+
   function pushToast(type, title, message) {
     const id = `${Date.now()}-${Math.random()}`
     setToasts((current) => [...current, { id, type, title, message }])
@@ -566,6 +612,7 @@ function DashboardView({
   async function handleCardAction(embed, actionName, payload) {
     clearFeedback()
     setPendingMap((current) => ({ ...current, [embed.slug]: actionName }))
+    setProgress(22)
     setActivity({
       tone: 'busy',
       text: `Pracuju s odkazem ${embed.slug}`,
@@ -598,6 +645,7 @@ function DashboardView({
         }
         setStatusMessage(data.message)
         pushToast('success', 'Archivace hotova', data.message)
+        setProgress(100)
       } else if (actionName === 'toggle') {
         const data = await postAdminAction('/api/admin/toggle', payload)
         setItems((current) =>
@@ -607,17 +655,20 @@ function DashboardView({
         )
         setStatusMessage(data.message)
         pushToast('success', 'Stav zmenen', data.message)
+        setProgress(100)
       } else if (actionName === 'delete') {
         const data = await postAdminAction('/api/admin/delete', payload)
         setItems((current) => current.filter((item) => item.slug !== data.slug))
         setSelectedSlugs((current) => current.filter((slug) => slug !== data.slug))
         setStatusMessage(data.message)
         pushToast('success', 'Zaznam smazan', data.message)
+        setProgress(100)
       } else if (actionName === 'duplicate') {
         const data = await postAdminAction('/api/admin/duplicate', payload)
         setItems((current) => [...current, data.embed])
         setStatusMessage(data.message)
         pushToast('success', 'Kopie vytvorena', data.message)
+        setProgress(100)
       }
     } catch (actionError) {
       setStatusError(actionError.message)
@@ -638,12 +689,14 @@ function DashboardView({
         text: 'Dashboard je pripraveny',
         detail: 'Muzes pokracovat dalsi akci bez obnoveni stranky.',
       })
+      window.setTimeout(() => setProgress(0), 500)
     }
   }
 
   async function handleBulkAction(action) {
     clearFeedback()
     setBulkPending(true)
+    setProgress(18)
     setActivity({
       tone: 'busy',
       text: `Provadim hromadnou akci nad ${selectedSlugs.length} odkazy`,
@@ -687,6 +740,7 @@ function DashboardView({
       setSelectedSlugs([])
       setStatusMessage(data.message)
       pushToast('success', 'Hromadna akce dokoncena', data.message)
+      setProgress(100)
     } catch (bulkError) {
       setStatusError(bulkError.message)
       setActivity({
@@ -702,6 +756,7 @@ function DashboardView({
         text: 'Dashboard je pripraveny',
         detail: 'Vyber byl zpracovan a muzes pokracovat dal.',
       })
+      window.setTimeout(() => setProgress(0), 500)
     }
   }
 
@@ -709,6 +764,7 @@ function DashboardView({
     event.preventDefault()
     clearFeedback()
     setSavePending(true)
+    setProgress(10)
     setActivity({
       tone: 'busy',
       text: 'Ukladam zmeny formulare',
@@ -722,6 +778,13 @@ function DashboardView({
       const formData = new FormData(event.currentTarget)
       const payload = Object.fromEntries(formData.entries())
       const data = await postAdminAction('/api/admin/embeds', payload)
+      setProgress(42)
+      setActivity({
+        tone: 'busy',
+        text: 'Ulozeno do administrace, overuji verejny odkaz',
+        detail:
+          'Kontroluji, jestli se nova verejna adresa opravdu propsala a odpovida zvenku.',
+      })
 
       setItems((current) => {
         const existing = current.findIndex((item) => item.slug === data.embed.slug)
@@ -734,12 +797,30 @@ function DashboardView({
         return [data.embed, ...current]
       })
 
-      setStatusMessage(data.message)
-      pushToast('success', 'Ulozeno', data.message)
+      setProgress(68)
+      const isVerified = await verifySavedLink(data.embed.slug)
+      setProgress(100)
+
+      if (!isVerified) {
+        const warningText =
+          'Zaznam je ulozeny v adminu, ale verejny odkaz se zatim nepotvrdil. Pockej chvili nebo zkus otevrit nahled.'
+        setStatusError(warningText)
+        pushToast('error', 'Verejny odkaz zatim nepotvrzen', warningText)
+        setActivity({
+          tone: 'error',
+          text: 'Ulozeni skoncilo, ale verejny odkaz jeste neni potvrzeny',
+          detail:
+            'Admin zaznam je zapsany, jen kontrola verejne adresy zatim neprosla. Muze jit o pomalejsi propsani uloziste.',
+        })
+        return
+      }
+
+      setStatusMessage('Odkaz byl ulozen a verejna adresa je potvrzena.')
+      pushToast('success', 'Ulozeno a overeno', 'Verejna adresa je pripravena k pouziti.')
       setActivity({
         tone: 'success',
-        text: 'Zmeny byly ulozeny',
-        detail: 'Seznam i statistiky byly aktualizovany bez obnoveni stranky.',
+        text: 'Zmeny byly ulozeny a overeny',
+        detail: 'Seznam i verejny odkaz jsou pripraveny bez obnoveni stranky.',
       })
     } catch (saveError) {
       setStatusError(saveError.message)
@@ -751,6 +832,7 @@ function DashboardView({
       pushToast('error', 'Ulozeni se nepovedlo', saveError.message)
     } finally {
       setSavePending(false)
+      window.setTimeout(() => setProgress(0), 700)
     }
   }
 
@@ -789,6 +871,7 @@ function DashboardView({
         </div>
 
         <div className="dashboard-top-actions">
+          <ThemeToggle />
           <a className="button button-secondary" href="/api/admin/export">
             Export CSV
           </a>
@@ -805,6 +888,11 @@ function DashboardView({
         text={activity.text}
         detail={activity.detail}
       />
+      {progress > 0 ? (
+        <div className="progress-strip" aria-hidden="true">
+          <div className="progress-strip__bar" style={{ width: `${progress}%` }} />
+        </div>
+      ) : null}
 
       <div className="summary-grid">
         <SummaryCard label="Celkem odkazu" value={summary.total} />
