@@ -1,6 +1,7 @@
 import Head from 'next/head'
 import Link from 'next/link'
 
+import { getBaseUrlFromRequest } from '../../lib/config'
 import { getSessionFromRequest } from '../../lib/auth'
 import { listEmbeds } from '../../lib/store'
 
@@ -41,7 +42,7 @@ function LoginView({ error }) {
   )
 }
 
-function DashboardView({ embeds, message, error }) {
+function DashboardView({ embeds, message, error, baseUrl, initialSlug, initialUrl }) {
   return (
     <section className="admin-layout">
       <div className="panel">
@@ -74,6 +75,7 @@ function DashboardView({ embeds, message, error }) {
               type="text"
               placeholder="sobotalibcice"
               pattern="[a-z0-9-]+"
+              defaultValue={initialSlug}
               required
             />
           </label>
@@ -84,6 +86,7 @@ function DashboardView({ embeds, message, error }) {
               name="url"
               rows="4"
               placeholder="https://public.levitio.com/events/..."
+              defaultValue={initialUrl}
               required
             />
           </label>
@@ -110,16 +113,27 @@ function DashboardView({ embeds, message, error }) {
             {embeds.map((embed) => (
               <article className="embed-item" key={embed.slug}>
                 <div className="embed-meta">
-                  <Link href={`/${embed.slug}`}>/{embed.slug}</Link>
+                  <p className="embed-label">Verejna adresa</p>
+                  <Link href={`/${embed.slug}`}>{`${baseUrl}/${embed.slug}`}</Link>
+                  <p className="embed-label">Cilova URL</p>
                   <p>{embed.url}</p>
                 </div>
 
-                <form method="post" action="/api/admin/delete">
-                  <input type="hidden" name="slug" value={embed.slug} />
-                  <button className="button button-danger" type="submit">
-                    Smazat
-                  </button>
-                </form>
+                <div className="embed-actions">
+                  <Link
+                    className="button button-secondary"
+                    href={`/admin?slug=${encodeURIComponent(embed.slug)}&url=${encodeURIComponent(embed.url)}`}
+                  >
+                    Upravit
+                  </Link>
+
+                  <form method="post" action="/api/admin/delete">
+                    <input type="hidden" name="slug" value={embed.slug} />
+                    <button className="button button-danger" type="submit">
+                      Smazat
+                    </button>
+                  </form>
+                </div>
               </article>
             ))}
           </div>
@@ -129,16 +143,32 @@ function DashboardView({ embeds, message, error }) {
   )
 }
 
-export default function AdminPage({ authenticated, embeds, error, message }) {
+export default function AdminPage({
+  authenticated,
+  embeds,
+  error,
+  message,
+  baseUrl,
+  initialSlug,
+  initialUrl,
+}) {
   return (
     <>
       <Head>
         <title>Admin | Poradatel</title>
+        <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,noimageindex" />
       </Head>
 
       <main className="shell">
         {authenticated ? (
-          <DashboardView embeds={embeds} error={error} message={message} />
+          <DashboardView
+            embeds={embeds}
+            error={error}
+            message={message}
+            baseUrl={baseUrl}
+            initialSlug={initialSlug}
+            initialUrl={initialUrl}
+          />
         ) : (
           <LoginView error={error} />
         )}
@@ -148,11 +178,19 @@ export default function AdminPage({ authenticated, embeds, error, message }) {
 }
 
 export async function getServerSideProps({ req, query }) {
+  req.res.setHeader(
+    'Cache-Control',
+    'private, no-store, no-cache, max-age=0, must-revalidate'
+  )
+
   const session = getSessionFromRequest(req)
   const error = Array.isArray(query.error) ? query.error[0] : query.error || ''
   const message = Array.isArray(query.message)
     ? query.message[0]
     : query.message || ''
+  const initialSlug = Array.isArray(query.slug) ? query.slug[0] : query.slug || ''
+  const initialUrl = Array.isArray(query.url) ? query.url[0] : query.url || ''
+  const baseUrl = getBaseUrlFromRequest(req)
 
   if (!session) {
     return {
@@ -161,6 +199,9 @@ export async function getServerSideProps({ req, query }) {
         embeds: [],
         error,
         message: '',
+        baseUrl,
+        initialSlug: '',
+        initialUrl: '',
       },
     }
   }
@@ -171,6 +212,9 @@ export async function getServerSideProps({ req, query }) {
       embeds: await listEmbeds(),
       error,
       message,
+      baseUrl,
+      initialSlug,
+      initialUrl,
     },
   }
 }

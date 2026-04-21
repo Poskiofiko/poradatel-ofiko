@@ -5,6 +5,7 @@ export default function HomePage() {
     <>
       <Head>
         <title>Neplatný odkaz | Ofiko</title>
+        <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,noimageindex" />
       </Head>
 
       <main
@@ -98,4 +99,15 @@ export default function HomePage() {
       </main>
     </>
   )
+}
+
+export async function getServerSideProps({ res }) {
+  res.setHeader(
+    'Cache-Control',
+    'private, no-store, no-cache, max-age=0, must-revalidate'
+  )
+
+  return {
+    props: {},
+  }
 }

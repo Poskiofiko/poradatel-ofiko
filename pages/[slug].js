@@ -10,7 +10,7 @@ export default function EmbedPage({ embed }) {
   useEffect(() => {
     const timeout = window.setTimeout(() => {
       setShowFallback(true)
-    }, 3200)
+    }, 2000)
 
     return () => window.clearTimeout(timeout)
   }, [])
@@ -20,6 +20,7 @@ export default function EmbedPage({ embed }) {
       <>
         <Head>
           <title>Odkaz nenalezen | Ofiko Poradatel</title>
+          <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,noimageindex" />
         </Head>
 
         <main className="shell shell-home public-home">
@@ -53,6 +54,7 @@ export default function EmbedPage({ embed }) {
     <>
       <Head>
         <title>{embed.slug} | Ofiko Poradatel</title>
+        <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,noimageindex" />
       </Head>
 
       <main className="embed-page">
@@ -79,6 +81,11 @@ export default function EmbedPage({ embed }) {
 }
 
 export async function getServerSideProps({ params, res }) {
+  res.setHeader(
+    'Cache-Control',
+    'private, no-store, no-cache, max-age=0, must-revalidate'
+  )
+
   const embed = await getEmbedBySlug(params.slug)
 
   if (!embed) {
