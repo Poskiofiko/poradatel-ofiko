@@ -27,7 +27,9 @@ export default async function handler(req, res) {
     })
 
     res.writeHead(302, {
-      Location: '/admin?message=Embed%20byl%20ulozen&view=all',
+      Location: `/admin?message=Embed%20byl%20ulozen&view=${encodeURIComponent(
+        req.body.view || 'all'
+      )}`,
     })
     res.end()
   } catch (error) {

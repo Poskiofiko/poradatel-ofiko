@@ -393,13 +393,12 @@ h2 {
 
 .toolbar-panel,
 .form-panel {
-  position: sticky;
-  top: 24px;
+  position: static;
 }
 
 .toolbar-row {
   display: grid;
-  grid-template-columns: minmax(0, 1.3fr) repeat(2, minmax(180px, 0.6fr));
+  grid-template-columns: minmax(0, 1.4fr) repeat(2, minmax(160px, 0.55fr));
   gap: 14px;
   align-items: end;
 }
@@ -538,6 +537,8 @@ h2 {
 
 .record-select {
   padding-top: 8px;
+  display: flex;
+  align-items: flex-start;
 }
 
 .record-main {
@@ -563,7 +564,7 @@ h2 {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
-  justify-content: flex-end;
+  justify-content: flex-start;
 }
 
 .button-ghost {
@@ -682,9 +683,12 @@ h2 {
     align-items: stretch;
   }
 
-  .toolbar-panel,
-  .form-panel {
-    position: static;
+  .record-card {
+    grid-template-columns: 1fr;
+  }
+
+  .record-select {
+    padding-top: 0;
   }
 }
 
@@ -698,6 +702,20 @@ h2 {
   .panel {
     border-radius: 24px;
     padding: 22px;
+  }
+
+  .dashboard-top-actions,
+  .bulk-actions,
+  .record-actions,
+  .record-quick-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .button,
+  .secondary-link,
+  .primary-link {
+    width: 100%;
   }
 
   .embed-fallback {

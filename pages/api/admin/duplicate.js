@@ -15,12 +15,13 @@ export default async function handler(req, res) {
 
   try {
     const duplicated = await duplicateEmbed(req.body.slug)
+    const view = encodeURIComponent(req.body.view || 'all')
     res.writeHead(302, {
       Location: `/admin?message=${encodeURIComponent(
         `Vytvorena kopie ${duplicated.slug}`
       )}&slug=${encodeURIComponent(duplicated.slug)}&url=${encodeURIComponent(
         duplicated.url
-      )}&protected=${duplicated.passwordProtected ? '1' : '0'}`,
+      )}&protected=${duplicated.passwordProtected ? '1' : '0'}&view=${view}`,
     })
     res.end()
   } catch (error) {

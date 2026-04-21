@@ -14,11 +14,12 @@ export default async function handler(req, res) {
   }
 
   const changed = await bulkUpdateEmbeds(req.body.slug, req.body.action)
+  const view = encodeURIComponent(req.body.view || 'all')
 
   res.writeHead(302, {
     Location: `/admin?message=${encodeURIComponent(
       `Hromadna akce probehla nad ${changed} odkazy`
-    )}`,
+    )}&view=${view}`,
   })
   res.end()
 }

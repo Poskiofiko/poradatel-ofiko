@@ -14,11 +14,16 @@ export default async function handler(req, res) {
   }
 
   await setEmbedArchived(req.body.slug, req.body.archived === '1')
+  const requestedView = req.body.view || (req.body.archived === '1' ? 'archived' : 'active')
   res.writeHead(302, {
     Location:
       req.body.archived === '1'
-        ? '/admin?message=Embed%20byl%20archivovan&view=archived'
-        : '/admin?message=Embed%20byl%20obnoven&view=active',
+        ? `/admin?message=Embed%20byl%20archivovan&view=${encodeURIComponent(
+            requestedView
+          )}`
+        : `/admin?message=Embed%20byl%20obnoven&view=${encodeURIComponent(
+            requestedView === 'archived' ? 'active' : requestedView
+          )}`,
   })
   res.end()
 }

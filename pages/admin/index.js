@@ -84,7 +84,7 @@ function Badge({ children, tone = 'default' }) {
   return <span className={`embed-flag embed-flag--${tone}`}>{children}</span>
 }
 
-function RecordCard({ embed, baseUrl, selected, onToggleSelect }) {
+function RecordCard({ embed, baseUrl, selected, onToggleSelect, currentView }) {
   const publicUrl = `${baseUrl}/${embed.slug}`
   const confirmDelete =
     'Opravdu chces tenhle odkaz smazat? Tohle nejde vratit zpet.'
@@ -217,6 +217,7 @@ function RecordCard({ embed, baseUrl, selected, onToggleSelect }) {
 
           <form method="post" action="/api/admin/duplicate">
             <input type="hidden" name="slug" value={embed.slug} />
+            <input type="hidden" name="view" value={currentView} />
             <button className="button button-secondary" type="submit">
               Duplikovat
             </button>
@@ -233,6 +234,7 @@ function RecordCard({ embed, baseUrl, selected, onToggleSelect }) {
           <form method="post" action="/api/admin/archive">
             <input type="hidden" name="slug" value={embed.slug} />
             <input type="hidden" name="archived" value={embed.archived ? '0' : '1'} />
+            <input type="hidden" name="view" value={currentView} />
             <button
               className="button button-secondary"
               type="submit"
@@ -246,9 +248,10 @@ function RecordCard({ embed, baseUrl, selected, onToggleSelect }) {
             </button>
           </form>
 
-          <form method="post" action="/api/admin/bulk">
+          <form method="post" action="/api/admin/toggle">
             <input type="hidden" name="slug" value={embed.slug} />
-            <input type="hidden" name="action" value={embed.isEnabled ? 'disable' : 'enable'} />
+            <input type="hidden" name="isEnabled" value={embed.isEnabled ? '0' : '1'} />
+            <input type="hidden" name="view" value={currentView} />
             <button
               className="button button-secondary"
               type="submit"
@@ -264,6 +267,7 @@ function RecordCard({ embed, baseUrl, selected, onToggleSelect }) {
 
           <form method="post" action="/api/admin/delete">
             <input type="hidden" name="slug" value={embed.slug} />
+            <input type="hidden" name="view" value={currentView} />
             <button
               className="button button-danger"
               type="submit"
@@ -473,6 +477,7 @@ function DashboardView({
           {error ? <p className="error-box">{error}</p> : null}
 
           <form className="stack" method="post" action="/api/admin/embeds">
+            <input type="hidden" name="view" value={view} />
             <label className="field">
               <span>Slug</span>
               <input
@@ -630,6 +635,7 @@ function DashboardView({
                   baseUrl={baseUrl}
                   selected={selectedSlugs.includes(embed.slug)}
                   onToggleSelect={toggleSelect}
+                  currentView={view}
                 />
               ))
             )}

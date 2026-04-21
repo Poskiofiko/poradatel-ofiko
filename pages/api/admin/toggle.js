@@ -1,5 +1,5 @@
 import { isAuthenticatedRequest } from '../../../lib/auth'
-import { deleteEmbed } from '../../../lib/store'
+import { setEmbedEnabled } from '../../../lib/store'
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -13,10 +13,14 @@ export default async function handler(req, res) {
     return
   }
 
-  await deleteEmbed(req.body.slug)
+  const isEnabled = req.body.isEnabled === '1'
+  await setEmbedEnabled(req.body.slug, isEnabled)
   const view = encodeURIComponent(req.body.view || 'all')
+
   res.writeHead(302, {
-    Location: `/admin?message=Embed%20byl%20smazan&view=${view}`,
+    Location: `/admin?message=${encodeURIComponent(
+      isEnabled ? 'Odkaz byl zapnut' : 'Odkaz byl vypnut'
+    )}&view=${view}`,
   })
   res.end()
 }
