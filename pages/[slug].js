@@ -152,9 +152,15 @@ export default function EmbedPage({
       <PublicHead title={`${embed.slug} | Ofiko Poradatel`} />
 
       <main className="embed-page">
-        <div className={`embed-frame-shell ${embed.renderMode === 'display' ? 'embed-frame-shell--display' : ''}`}>
+        <div
+          className={`embed-frame-shell ${
+            embed.renderMode === 'display' ? 'embed-frame-shell--display' : ''
+          }`}
+        >
           <iframe
-            className={`embed-frame ${embed.renderMode === 'display' ? 'embed-frame--display' : ''}`}
+            className={`embed-frame ${
+              embed.renderMode === 'display' ? 'embed-frame--display' : ''
+            }`}
             src={embed.url}
             title={embed.slug}
             allow="clipboard-read; clipboard-write"
@@ -164,13 +170,24 @@ export default function EmbedPage({
                 : undefined
             }
             loading="eager"
+            scrolling="yes"
             onLoad={() => {
               setHasLoaded(true)
               setShowFallback(false)
             }}
           />
+
           {embed.renderMode === 'display' ? (
-            <div className="embed-display-guard" aria-hidden="true">
+            <div
+              aria-hidden="true"
+              style={{
+                position: 'absolute',
+                top: '16px',
+                right: '16px',
+                zIndex: 3,
+                pointerEvents: 'none',
+              }}
+            >
               <div className="embed-display-guard__badge">
                 <span className="material-icons">visibility</span>
                 Zobrazovaci rezim
@@ -183,7 +200,7 @@ export default function EmbedPage({
           <div className="embed-fallback">
             <span>
               {embed.renderMode === 'display'
-                ? 'Zobrazovaci rezim omezuje interakce uvnitr stranky. Kdyz se embed nezobrazi spravne, otevri cilovou stranku primo.'
+                ? 'Zobrazovaci rezim omezuje nektere interakce uvnitr stranky. Kdyz se embed nezobrazi spravne, otevri cilovou stranku primo.'
                 : 'Pokud se embed nezobrazi, otevri cilovou stranku primo.'}
             </span>
             <a href={embed.url} target="_blank" rel="noreferrer">
