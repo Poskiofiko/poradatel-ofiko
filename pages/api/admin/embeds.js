@@ -1,4 +1,7 @@
-import { isAuthenticatedRequest } from '../../../lib/auth'
+import {
+  isAuthenticatedRequest,
+  serializeClearLinkAccessCookies,
+} from '../../../lib/auth'
 import { saveEmbed } from '../../../lib/store'
 
 export default async function handler(req, res) {
@@ -17,6 +20,7 @@ export default async function handler(req, res) {
   }
 
   try {
+    const clearCookies = serializeClearLinkAccessCookies(req.body.slug)
     const embed = await saveEmbed({
       slug: req.body.slug,
       url: req.body.url,
@@ -28,6 +32,8 @@ export default async function handler(req, res) {
       expiresAt: req.body.expiresAt,
       isEnabled: req.body.isEnabled,
     })
+
+    res.setHeader('Set-Cookie', clearCookies)
 
     if (req.headers['x-admin-json'] === '1') {
       return res.status(200).json({

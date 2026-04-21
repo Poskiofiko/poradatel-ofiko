@@ -94,6 +94,53 @@ function ActivityBanner({ text, detail, tone = 'idle' }) {
   )
 }
 
+function SideNav({ summary, activeView, onSelectView }) {
+  const items = [
+    { id: 'all', label: 'Dashboard', count: summary.total },
+    { id: 'active', label: 'Odkazy', count: summary.active },
+    { id: 'archived', label: 'Archiv', count: summary.archived },
+    { id: 'protected', label: 'Chranene', count: summary.protected },
+    { id: 'disabled', label: 'Vypnute', count: summary.disabled },
+    { id: 'all', label: 'Aktivita', count: null },
+  ]
+
+  return (
+    <aside className="admin-sidebar panel">
+      <div className="admin-sidebar__brand">
+        <p className="eyebrow">Open Admin</p>
+        <h2>Ofiko Panel</h2>
+        <p className="muted">Sprava verejnych odkazu, pristupu a stavu embedu.</p>
+      </div>
+
+      <div className="admin-sidebar__search">
+        <input
+          type="search"
+          value="Ofiko Control Suite"
+          readOnly
+          aria-label="Navigace"
+        />
+      </div>
+
+      <nav className="admin-sidebar__nav" aria-label="Admin navigace">
+        {items.map((item) => (
+          <button
+            key={`${item.label}-${item.id}`}
+            type="button"
+            className={`admin-nav-item ${activeView === item.id ? 'admin-nav-item--active' : ''}`}
+            onClick={() => onSelectView(item.id)}
+          >
+            <span className="admin-nav-item__dot" />
+            <span>{item.label}</span>
+            {item.count !== null ? (
+              <span className="admin-nav-item__count">{item.count}</span>
+            ) : null}
+          </button>
+        ))}
+      </nav>
+    </aside>
+  )
+}
+
 function ThemeToggle() {
   const [theme, setTheme] = useState('light')
 
@@ -111,7 +158,7 @@ function ThemeToggle() {
 
   return (
     <button className="button button-secondary" type="button" onClick={toggleTheme}>
-      {theme === 'dark' ? 'Svetly rezim' : 'Dark mode'}
+      {theme === 'dark' ? 'Svetly rezim' : 'Tmavy rezim'}
     </button>
   )
 }
@@ -858,20 +905,47 @@ function DashboardView({
   }
 
   return (
-    <section className="dashboard-shell">
+    <section className="admin-shell-app">
+      <SideNav summary={summary} activeView={view} onSelectView={setView} />
+
+      <div className="admin-workspace">
       <ToastStack toasts={toasts} onDismiss={dismissToast} />
+
+      <div className="dashboard-topbar panel">
+        <div className="dashboard-topbar__left">
+          <div className="dashboard-burger" aria-hidden="true">
+            <span />
+            <span />
+            <span />
+          </div>
+          <div>
+            <p className="eyebrow">Pages / Odkazy</p>
+            <h1>Link Control Center</h1>
+          </div>
+        </div>
+
+        <div className="dashboard-topbar__right">
+          <ThemeToggle />
+          <div className="admin-user-chip">
+            <div className="admin-user-chip__avatar">A</div>
+            <div>
+              <strong>Administrator</strong>
+              <p>Ofiko workspace</p>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <div className="dashboard-top panel">
         <div>
           <p className="eyebrow">Ofiko Poradatel</p>
-          <h1>Dashboard odkazu</h1>
+          <h2>Dashboard odkazu</h2>
           <p className="muted">
-            Rychla sprava aktivnich odkazu, archivu, hesel, statistik a metadat na jednom miste.
+            Rychla sprava aktivnich odkazu, archivu, hesel, statistik a metadat v pracovnim rozhrani.
           </p>
         </div>
 
         <div className="dashboard-top-actions">
-          <ThemeToggle />
           <a className="button button-secondary" href="/api/admin/export">
             Export CSV
           </a>
@@ -1065,6 +1139,14 @@ function DashboardView({
           </div>
 
           <div className="records-column">
+            <div className="records-table-head panel">
+              <span>Vyber</span>
+              <span>Verejna adresa</span>
+              <span>Stav</span>
+              <span>Statistiky</span>
+              <span>Upraveno</span>
+              <span>Akce</span>
+            </div>
             {filtered.length === 0 ? (
               <section className="panel empty-state">
                 <p className="eyebrow">Prazdny vysledek</p>
@@ -1089,6 +1171,7 @@ function DashboardView({
             )}
           </div>
         </div>
+      </div>
       </div>
     </section>
   )

@@ -1,4 +1,7 @@
-import { isAuthenticatedRequest } from '../../../lib/auth'
+import {
+  isAuthenticatedRequest,
+  serializeClearLinkAccessCookies,
+} from '../../../lib/auth'
 import { bulkUpdateEmbeds } from '../../../lib/store'
 
 export default async function handler(req, res) {
@@ -17,6 +20,7 @@ export default async function handler(req, res) {
   }
 
   const changed = await bulkUpdateEmbeds(req.body.slug, req.body.action)
+  res.setHeader('Set-Cookie', serializeClearLinkAccessCookies(req.body.slug))
   if (req.headers['x-admin-json'] === '1') {
     return res.status(200).json({
       ok: true,
