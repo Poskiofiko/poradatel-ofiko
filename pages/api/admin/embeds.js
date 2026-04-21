@@ -29,6 +29,7 @@ export default async function handler(req, res) {
       category: req.body.category,
       note: req.body.note,
       tags: req.body.tags,
+      renderMode: req.body.renderMode,
       expiresAt: req.body.expiresAt,
       isEnabled: req.body.isEnabled,
     })

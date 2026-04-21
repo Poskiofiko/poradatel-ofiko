@@ -343,6 +343,12 @@ h2 {
   box-shadow: 0 0 0 4px rgba(90, 71, 204, 0.08);
 }
 
+.form-hint {
+  margin: -4px 0 2px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
 .success-box,
 .error-box {
   border-radius: 18px;
@@ -808,6 +814,10 @@ h2 {
   height: 100vh;
   border: 0;
   background: #fff;
+}
+
+.embed-frame--display {
+  background: #f7f9fc;
 }
 
 .embed-fallback {

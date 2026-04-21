@@ -31,7 +31,9 @@ export default async function handler(req, res) {
         `Vytvorena kopie ${duplicated.slug}`
       )}&slug=${encodeURIComponent(duplicated.slug)}&url=${encodeURIComponent(
         duplicated.url
-      )}&protected=${duplicated.passwordProtected ? '1' : '0'}&view=${view}`,
+      )}&protected=${duplicated.passwordProtected ? '1' : '0'}&renderMode=${encodeURIComponent(
+        duplicated.renderMode || 'standard'
+      )}&view=${view}`,
     })
     res.end()
   } catch (error) {

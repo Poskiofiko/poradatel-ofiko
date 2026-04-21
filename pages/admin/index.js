@@ -239,6 +239,9 @@ function RecordCard({
               {publicUrl}
             </Link>
             <div className="record-badges">
+              <Badge tone={embed.renderMode === 'display' ? 'default' : 'muted'}>
+                {embed.renderMode === 'display' ? 'Zobrazovaci rezim' : 'Standardni rezim'}
+              </Badge>
               <Badge tone={embed.passwordProtected ? 'brand' : 'muted'}>
                 {embed.passwordProtected ? 'Chraneno heslem' : 'Bez hesla'}
               </Badge>
@@ -333,7 +336,9 @@ function RecordCard({
               embed.category || ''
             )}&note=${encodeURIComponent(embed.note || '')}&tags=${encodeURIComponent(
               embed.tags.join(', ')
-            )}&expiresAt=${encodeURIComponent(embed.expiresAt || '')}&enabled=${
+            )}&renderMode=${encodeURIComponent(embed.renderMode || 'standard')}&expiresAt=${encodeURIComponent(
+              embed.expiresAt || ''
+            )}&enabled=${
               embed.isEnabled ? '1' : '0'
             }`}
           >
@@ -500,6 +505,7 @@ function DashboardView({
   initialCategory,
   initialNote,
   initialTags,
+  initialRenderMode,
   initialExpiresAt,
   initialEnabled,
   initialView,
@@ -1062,6 +1068,14 @@ function DashboardView({
 
             <div className="form-grid">
               <label className="field">
+                <span>Rezim odkazu</span>
+                <select name="renderMode" defaultValue={initialRenderMode}>
+                  <option value="standard">Standardni - iframe se nijak neupravuje</option>
+                  <option value="display">Zobrazovaci - omezeny iframe pro prohlizeni</option>
+                </select>
+              </label>
+
+              <label className="field">
                 <span>Expirace</span>
                 <input name="expiresAt" type="date" defaultValue={initialExpiresAt} />
               </label>
@@ -1092,6 +1106,11 @@ function DashboardView({
               <input name="removePassword" type="checkbox" value="on" />
               <span>Odebrat heslo z tohoto odkazu</span>
             </label>
+
+            <p className="form-hint">
+              Zobrazovaci rezim pouzije omezeny iframe sandbox. Obvykle zachova scrollovani a
+              ztizi klikani nebo akce uvnitr, ale u cizich webu to nemusi byt na 100 % stejne.
+            </p>
 
             <button className="button button-primary" type="submit" disabled={savePending}>
               {savePending ? 'Ukladam...' : 'Ulozit odkaz'}
@@ -1196,6 +1215,7 @@ export default function AdminPage({
   initialCategory,
   initialNote,
   initialTags,
+  initialRenderMode,
   initialExpiresAt,
   initialEnabled,
   initialView,
@@ -1241,6 +1261,7 @@ export default function AdminPage({
             initialCategory={initialCategory}
             initialNote={initialNote}
             initialTags={initialTags}
+            initialRenderMode={initialRenderMode}
             initialExpiresAt={initialExpiresAt}
             initialEnabled={initialEnabled}
             initialView={initialView}
@@ -1271,6 +1292,8 @@ export async function getServerSideProps({ req, res, query }) {
     Array.isArray(query.category) ? query.category[0] : query.category || ''
   const initialNote = Array.isArray(query.note) ? query.note[0] : query.note || ''
   const initialTags = Array.isArray(query.tags) ? query.tags[0] : query.tags || ''
+  const initialRenderMode =
+    Array.isArray(query.renderMode) ? query.renderMode[0] : query.renderMode || 'standard'
   const initialExpiresAt =
     Array.isArray(query.expiresAt) ? query.expiresAt[0] : query.expiresAt || ''
   const initialEnabled =
@@ -1292,6 +1315,7 @@ export async function getServerSideProps({ req, res, query }) {
         initialCategory: '',
         initialNote: '',
         initialTags: '',
+        initialRenderMode: 'standard',
         initialExpiresAt: '',
         initialEnabled: true,
         initialView: 'active',
@@ -1312,6 +1336,7 @@ export async function getServerSideProps({ req, res, query }) {
       initialCategory,
       initialNote,
       initialTags,
+      initialRenderMode,
       initialExpiresAt,
       initialEnabled,
       initialView,

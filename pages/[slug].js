@@ -153,10 +153,15 @@ export default function EmbedPage({
 
       <main className="embed-page">
         <iframe
-          className="embed-frame"
+          className={`embed-frame ${embed.renderMode === 'display' ? 'embed-frame--display' : ''}`}
           src={embed.url}
           title={embed.slug}
           allow="clipboard-read; clipboard-write"
+          sandbox={
+            embed.renderMode === 'display'
+              ? 'allow-same-origin allow-scripts'
+              : undefined
+          }
           loading="eager"
           onLoad={() => {
             setHasLoaded(true)
@@ -166,7 +171,11 @@ export default function EmbedPage({
 
         {showFallback ? (
           <div className="embed-fallback">
-            <span>Pokud se embed nezobrazi, otevri cilovou stranku primo.</span>
+            <span>
+              {embed.renderMode === 'display'
+                ? 'Zobrazovaci rezim omezuje interakce uvnitr stranky. Kdyz se embed nezobrazi spravne, otevri cilovou stranku primo.'
+                : 'Pokud se embed nezobrazi, otevri cilovou stranku primo.'}
+            </span>
             <a href={embed.url} target="_blank" rel="noreferrer">
               Otevrit stranku
             </a>
