@@ -6,6 +6,10 @@ import { getBaseUrlFromRequest } from '../../lib/config'
 import { getSessionFromRequest } from '../../lib/auth'
 import { listEmbeds } from '../../lib/store'
 
+function AdminIcon({ name, className = '' }) {
+  return <span className={`material-icons ${className}`.trim()} aria-hidden="true">{name}</span>
+}
+
 function formatDate(value) {
   if (!value) {
     return 'Neznamy cas'
@@ -96,12 +100,12 @@ function ActivityBanner({ text, detail, tone = 'idle' }) {
 
 function SideNav({ summary, activeView, onSelectView }) {
   const items = [
-    { id: 'all', label: 'Dashboard', count: summary.total },
-    { id: 'active', label: 'Odkazy', count: summary.active },
-    { id: 'archived', label: 'Archiv', count: summary.archived },
-    { id: 'protected', label: 'Chranene', count: summary.protected },
-    { id: 'disabled', label: 'Vypnute', count: summary.disabled },
-    { id: 'all', label: 'Aktivita', count: null },
+    { id: 'all', label: 'Dashboard', count: summary.total, icon: 'dashboard' },
+    { id: 'active', label: 'Odkazy', count: summary.active, icon: 'link' },
+    { id: 'archived', label: 'Archiv', count: summary.archived, icon: 'inventory_2' },
+    { id: 'protected', label: 'Chranene', count: summary.protected, icon: 'lock' },
+    { id: 'disabled', label: 'Vypnute', count: summary.disabled, icon: 'visibility_off' },
+    { id: 'all', label: 'Aktivita', count: null, icon: 'history' },
   ]
 
   return (
@@ -129,7 +133,7 @@ function SideNav({ summary, activeView, onSelectView }) {
             className={`admin-nav-item ${activeView === item.id ? 'admin-nav-item--active' : ''}`}
             onClick={() => onSelectView(item.id)}
           >
-            <span className="admin-nav-item__dot" />
+            <AdminIcon name={item.icon} className="admin-nav-item__icon" />
             <span>{item.label}</span>
             {item.count !== null ? (
               <span className="admin-nav-item__count">{item.count}</span>
@@ -158,6 +162,7 @@ function ThemeToggle() {
 
   return (
     <button className="button button-secondary" type="button" onClick={toggleTheme}>
+      <AdminIcon name={theme === 'dark' ? 'light_mode' : 'dark_mode'} className="button-icon" />
       {theme === 'dark' ? 'Svetly rezim' : 'Tmavy rezim'}
     </button>
   )
@@ -914,12 +919,10 @@ function DashboardView({
       <div className="dashboard-topbar panel">
         <div className="dashboard-topbar__left">
           <div className="dashboard-burger" aria-hidden="true">
-            <span />
-            <span />
-            <span />
+            <AdminIcon name="menu" />
           </div>
           <div>
-            <p className="eyebrow">Pages / Odkazy</p>
+            <p className="eyebrow">Home / Pages</p>
             <h1>Link Control Center</h1>
           </div>
         </div>
@@ -927,7 +930,9 @@ function DashboardView({
         <div className="dashboard-topbar__right">
           <ThemeToggle />
           <div className="admin-user-chip">
-            <div className="admin-user-chip__avatar">A</div>
+            <div className="admin-user-chip__avatar">
+              <AdminIcon name="person" />
+            </div>
             <div>
               <strong>Administrator</strong>
               <p>Ofiko workspace</p>
@@ -938,8 +943,8 @@ function DashboardView({
 
       <div className="dashboard-top panel">
         <div>
-          <p className="eyebrow">Ofiko Poradatel</p>
-          <h2>Dashboard odkazu</h2>
+          <p className="eyebrow">Page List</p>
+          <h2>Sprava odkazu a embedu</h2>
           <p className="muted">
             Rychla sprava aktivnich odkazu, archivu, hesel, statistik a metadat v pracovnim rozhrani.
           </p>
@@ -947,10 +952,12 @@ function DashboardView({
 
         <div className="dashboard-top-actions">
           <a className="button button-secondary" href="/api/admin/export">
+            <AdminIcon name="download" className="button-icon" />
             Export CSV
           </a>
           <form method="post" action="/api/admin/logout">
             <button className="button button-secondary" type="submit">
+              <AdminIcon name="logout" className="button-icon" />
               Odhlasit
             </button>
           </form>
@@ -1197,6 +1204,24 @@ export default function AdminPage({
     <>
       <Head>
         <title>Admin | Poradatel</title>
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap"
+        />
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/icon?family=Material+Icons"
+        />
+        <link
+          rel="stylesheet"
+          href="https://cdn.levitio.com/fonts/silka/roman/stylesheet.css"
+        />
+        <link
+          rel="stylesheet"
+          href="https://cdn.levitio.com/fonts/silka/italic/stylesheet.css"
+        />
         <meta
           name="robots"
           content="noindex,nofollow,noarchive,nosnippet,noimageindex"
