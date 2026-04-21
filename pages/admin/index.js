@@ -44,6 +44,28 @@ function isHttpsUrl(value) {
   }
 }
 
+function generatePassword(length = 14) {
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%'
+  return Array.from({ length }, () =>
+    alphabet[Math.floor(Math.random() * alphabet.length)]
+  ).join('')
+}
+
+function buildSuggestedSlug(url) {
+  try {
+    const parsed = new URL(url)
+    const host = parsed.hostname.replace(/^www\./, '').split('.')[0] || 'odkaz'
+    const path = parsed.pathname
+      .split('/')
+      .filter(Boolean)
+      .slice(-2)
+      .join('-')
+    return sanitizeDraftSlug([host, path].filter(Boolean).join('-')) || 'novy-odkaz'
+  } catch {
+    return 'novy-odkaz'
+  }
+}
+
 function LoginView({ error }) {
   return (
     <section className="panel auth-panel">
@@ -87,6 +109,106 @@ function SummaryCard({ label, value, tone = 'default' }) {
       <p>{label}</p>
       <strong>{value}</strong>
     </article>
+  )
+}
+
+function QuickFilterBar({ view, onChangeView, query, hasSelection, onClearFilters }) {
+  const filters = [
+    { id: 'active', label: 'Aktivni' },
+    { id: 'protected', label: 'S heslem' },
+    { id: 'disabled', label: 'Vypnute' },
+    { id: 'archived', label: 'Archiv' },
+    { id: 'all', label: 'Vse' },
+  ]
+
+  return (
+    <div className="quick-filter-bar">
+      <div className="quick-filter-bar__chips">
+        {filters.map((filter) => (
+          <button
+            key={filter.id}
+            type="button"
+            className={`quick-filter-chip ${view === filter.id ? 'quick-filter-chip--active' : ''}`}
+            onClick={() => onChangeView(filter.id)}
+          >
+            {filter.label}
+          </button>
+        ))}
+      </div>
+      <div className="quick-filter-bar__meta">
+        {query ? <span>Filtr podle hledani je aktivni</span> : null}
+        {hasSelection ? <span>Mas vybrane odkazy pro bulk akce</span> : null}
+        {query || view !== 'active' ? (
+          <button type="button" className="button button-secondary" onClick={onClearFilters}>
+            Vymazat filtry
+          </button>
+        ) : null}
+      </div>
+    </div>
+  )
+}
+
+function ActivityList({ entries }) {
+  if (entries.length === 0) {
+    return (
+      <section className="panel insight-panel">
+        <div className="panel-header">
+          <div>
+            <p className="eyebrow">Aktivita</p>
+            <h2>Posledni zmeny</h2>
+          </div>
+        </div>
+        <p className="muted">Zatim tu nejsou zadne zaznamenane zmeny.</p>
+      </section>
+    )
+  }
+
+  return (
+    <section className="panel insight-panel">
+      <div className="panel-header">
+        <div>
+          <p className="eyebrow">Aktivita</p>
+          <h2>Posledni zmeny</h2>
+        </div>
+      </div>
+      <div className="activity-list">
+        {entries.map((entry) => (
+          <article key={`${entry.slug}-${entry.at}-${entry.action}`} className="activity-list__item">
+            <div className="activity-list__icon">
+              <AdminIcon name="history" />
+            </div>
+            <div>
+              <strong>{entry.slug}</strong>
+              <p>{entry.actionLabel}</p>
+              <span>{formatDate(entry.at)}</span>
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function SmartInsights({ expiringSoon, dormantEmbeds }) {
+  return (
+    <section className="panel insight-panel">
+      <div className="panel-header">
+        <div>
+          <p className="eyebrow">Prehled</p>
+          <h2>Co stoji za pozornost</h2>
+        </div>
+      </div>
+      <div className="insight-stack">
+        <div className="insight-card">
+          <strong>Brzy expiruje</strong>
+          <p>{expiringSoon.length > 0 ? `${expiringSoon.length} odkazu` : 'Nic urgentniho'}</p>
+        </div>
+        <div className="insight-card">
+          <strong>Dlouho bez otevreni</strong>
+          <p>{dormantEmbeds.length > 0 ? `${dormantEmbeds.length} odkazu` : 'Vsechno ma aktivitu'}</p>
+        </div>
+      </div>
+    </section>
   )
 }
 
@@ -554,6 +676,7 @@ function DashboardView({
   const [savePending, setSavePending] = useState(false)
   const [draftSlug, setDraftSlug] = useState(initialSlug)
   const [draftUrl, setDraftUrl] = useState(initialUrl)
+  const [draftPassword, setDraftPassword] = useState('')
   const [toasts, setToasts] = useState([])
   const [activity, setActivity] = useState({
     tone: 'idle',
@@ -579,6 +702,33 @@ function DashboardView({
   )
   const targetUrlValid = !draftUrl || isHttpsUrl(draftUrl)
   const quickDomain = draftUrl ? getHostname(draftUrl) : ''
+  const recentActivity = [...items]
+    .flatMap((embed) =>
+      (embed.auditLog || []).slice(0, 3).map((entry) => ({
+        slug: embed.slug,
+        at: entry.at,
+        action: entry.action,
+        actionLabel: entry.detail || entry.action,
+      }))
+    )
+    .sort((left, right) => new Date(right.at) - new Date(left.at))
+    .slice(0, 6)
+  const expiringSoon = items.filter((embed) => {
+    if (!embed.expiresAt) {
+      return false
+    }
+    const diff = new Date(embed.expiresAt).getTime() - Date.now()
+    return diff > 0 && diff < 1000 * 60 * 60 * 24 * 7
+  })
+  const dormantEmbeds = items.filter((embed) => {
+    if (embed.archived) {
+      return false
+    }
+    if (!embed.lastViewedAt) {
+      return true
+    }
+    return Date.now() - new Date(embed.lastViewedAt).getTime() > 1000 * 60 * 60 * 24 * 21
+  })
 
   let filtered = items.filter((embed) => {
     if (view === 'active' && embed.archived) {
@@ -959,6 +1109,20 @@ function DashboardView({
     ])
   }
 
+  function clearFilters() {
+    setQuery('')
+    setView('active')
+    setSortBy('updated-desc')
+  }
+
+  function fillSuggestedSlug() {
+    setDraftSlug((current) => current || buildSuggestedSlug(draftUrl))
+  }
+
+  function fillGeneratedPassword() {
+    setDraftPassword(generatePassword())
+  }
+
   return (
     <section className="admin-shell-app">
       <SideNav summary={summary} activeView={view} onSelectView={setView} />
@@ -1029,10 +1193,18 @@ function DashboardView({
         <SummaryCard label="Celkem odkazu" value={summary.total} />
         <SummaryCard label="Aktivni" value={summary.active} tone="success" />
         <SummaryCard label="Archiv" value={summary.archived} tone="muted" />
-        <SummaryCard label="Chranene heslem" value={summary.protected} tone="brand" />
+        <SummaryCard label="S heslem" value={summary.protected} tone="brand" />
         <SummaryCard label="Vypnute" value={summary.disabled} tone="warning" />
         <SummaryCard label="Expirovane" value={summary.expired} tone="danger" />
       </div>
+
+      <QuickFilterBar
+        view={view}
+        onChangeView={setView}
+        query={query}
+        hasSelection={selectedSlugs.length > 0}
+        onClearFilters={clearFilters}
+      />
 
       <BulkBar
         selectedSlugs={selectedSlugs}
@@ -1070,15 +1242,24 @@ function DashboardView({
 
             <label className="field">
               <span>Slug</span>
-              <input
-                name="slug"
-                type="text"
-                placeholder="sobotalibcice"
-                pattern="[a-z0-9-]+"
-                value={draftSlug}
-                onChange={(event) => setDraftSlug(event.target.value)}
-                required
-              />
+              <div className="field-action-row">
+                <input
+                  name="slug"
+                  type="text"
+                  placeholder="sobotalibcice"
+                  pattern="[a-z0-9-]+"
+                  value={draftSlug}
+                  onChange={(event) => setDraftSlug(event.target.value)}
+                  required
+                />
+                <button
+                  type="button"
+                  className="button button-secondary button-inline"
+                  onClick={fillSuggestedSlug}
+                >
+                  Navrhnout
+                </button>
+              </div>
             </label>
 
             <label className="field">
@@ -1150,15 +1331,26 @@ function DashboardView({
 
             <label className="field">
               <span>Heslo pro odkaz</span>
-              <input
-                name="password"
-                type="text"
-                placeholder={
-                  initialProtected
-                    ? 'Ponech prazdne pro zachovani, nebo napis nove heslo'
-                    : 'Volitelne - kdyz vyplnis, odkaz bude chraneny heslem'
-                }
-              />
+              <div className="field-action-row">
+                <input
+                  name="password"
+                  type="text"
+                  value={draftPassword}
+                  onChange={(event) => setDraftPassword(event.target.value)}
+                  placeholder={
+                    initialProtected
+                      ? 'Ponech prazdne pro zachovani, nebo napis nove heslo'
+                      : 'Volitelne - kdyz vyplnis, odkaz bude chraneny heslem'
+                  }
+                />
+                <button
+                  type="button"
+                  className="button button-secondary button-inline"
+                  onClick={fillGeneratedPassword}
+                >
+                  Generovat
+                </button>
+              </div>
             </label>
 
             <label className="field field-inline">
@@ -1225,6 +1417,11 @@ function DashboardView({
                 Zobrazeno <strong>{filtered.length}</strong> z <strong>{items.length}</strong> odkazu
               </p>
             </div>
+          </div>
+
+          <div className="insight-grid">
+            <SmartInsights expiringSoon={expiringSoon} dormantEmbeds={dormantEmbeds} />
+            <ActivityList entries={recentActivity} />
           </div>
 
           <div className="records-column">
