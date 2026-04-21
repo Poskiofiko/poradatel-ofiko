@@ -177,8 +177,8 @@ export default function AdminPage({
   )
 }
 
-export async function getServerSideProps({ req, query }) {
-  req.res.setHeader(
+export async function getServerSideProps({ req, res, query }) {
+  res.setHeader(
     'Cache-Control',
     'private, no-store, no-cache, max-age=0, must-revalidate'
   )
