@@ -42,7 +42,15 @@ function LoginView({ error }) {
   )
 }
 
-function DashboardView({ embeds, message, error, baseUrl, initialSlug, initialUrl }) {
+function DashboardView({
+  embeds,
+  message,
+  error,
+  baseUrl,
+  initialSlug,
+  initialUrl,
+  initialProtected,
+}) {
   return (
     <section className="admin-layout">
       <div className="panel">
@@ -91,6 +99,24 @@ function DashboardView({ embeds, message, error, baseUrl, initialSlug, initialUr
             />
           </label>
 
+          <label className="field">
+            <span>Heslo pro odkaz</span>
+            <input
+              name="password"
+              type="text"
+              placeholder={
+                initialProtected
+                  ? 'Ponech prazdne pro zachovani, nebo napis nove heslo'
+                  : 'Volitelne - kdyz vyplnis, odkaz bude chraneny heslem'
+              }
+            />
+          </label>
+
+          <label className="field field-inline">
+            <input name="removePassword" type="checkbox" value="on" />
+            <span>Odebrat heslo z tohoto odkazu</span>
+          </label>
+
           <button className="button button-primary" type="submit">
             Ulozit embed
           </button>
@@ -115,6 +141,9 @@ function DashboardView({ embeds, message, error, baseUrl, initialSlug, initialUr
                 <div className="embed-meta">
                   <p className="embed-label">Verejna adresa</p>
                   <Link href={`/${embed.slug}`}>{`${baseUrl}/${embed.slug}`}</Link>
+                  <p className="embed-flag">
+                    {embed.passwordProtected ? 'Chraneno heslem' : 'Bez hesla'}
+                  </p>
                   <p className="embed-label">Cilova URL</p>
                   <p>{embed.url}</p>
                 </div>
@@ -122,7 +151,7 @@ function DashboardView({ embeds, message, error, baseUrl, initialSlug, initialUr
                 <div className="embed-actions">
                   <Link
                     className="button button-secondary"
-                    href={`/admin?slug=${encodeURIComponent(embed.slug)}&url=${encodeURIComponent(embed.url)}`}
+                    href={`/admin?slug=${encodeURIComponent(embed.slug)}&url=${encodeURIComponent(embed.url)}&protected=${embed.passwordProtected ? '1' : '0'}`}
                   >
                     Upravit
                   </Link>
@@ -151,6 +180,7 @@ export default function AdminPage({
   baseUrl,
   initialSlug,
   initialUrl,
+  initialProtected,
 }) {
   return (
     <>
@@ -168,6 +198,7 @@ export default function AdminPage({
             baseUrl={baseUrl}
             initialSlug={initialSlug}
             initialUrl={initialUrl}
+            initialProtected={initialProtected}
           />
         ) : (
           <LoginView error={error} />
@@ -190,6 +221,9 @@ export async function getServerSideProps({ req, res, query }) {
     : query.message || ''
   const initialSlug = Array.isArray(query.slug) ? query.slug[0] : query.slug || ''
   const initialUrl = Array.isArray(query.url) ? query.url[0] : query.url || ''
+  const initialProtected =
+    (Array.isArray(query.protected) ? query.protected[0] : query.protected || '') ===
+    '1'
   const baseUrl = getBaseUrlFromRequest(req)
 
   if (!session) {
@@ -202,6 +236,7 @@ export async function getServerSideProps({ req, res, query }) {
         baseUrl,
         initialSlug: '',
         initialUrl: '',
+        initialProtected: false,
       },
     }
   }
@@ -215,6 +250,7 @@ export async function getServerSideProps({ req, res, query }) {
       baseUrl,
       initialSlug,
       initialUrl,
+      initialProtected,
     },
   }
 }

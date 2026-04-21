@@ -251,6 +251,16 @@ h2 {
   color: var(--muted);
 }
 
+.field-inline {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.field-inline input {
+  width: auto;
+}
+
 .field input,
 .field textarea {
   width: 100%;
@@ -343,6 +353,22 @@ h2 {
   flex-wrap: wrap;
   gap: 12px;
   justify-content: flex-end;
+}
+
+.embed-flag {
+  display: inline-flex;
+  margin-top: 8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(90, 71, 204, 0.1);
+  color: var(--brand);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.protected-form {
+  max-width: 420px;
+  margin: 0 auto;
 }
 
 .centered-panel {

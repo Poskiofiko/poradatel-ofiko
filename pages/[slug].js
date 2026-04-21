@@ -2,18 +2,60 @@ import Head from 'next/head'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 
+import { hasLinkAccess } from '../lib/auth'
 import { getEmbedBySlug } from '../lib/store'
 
-export default function EmbedPage({ embed }) {
+function ProtectedPage({ slug, error }) {
+  return (
+    <main className="shell shell-home public-home">
+      <section className="panel centered-panel public-panel public-empty">
+        <p className="eyebrow">Chraneny odkaz</p>
+        <h1>Tenhle odkaz je pod heslem</h1>
+        <p className="muted">
+          Zadej heslo, ktere jsi dostal s odkazem. Po spravnem zadani se stranka otevre.
+        </p>
+        {error ? <p className="error-box">{error}</p> : null}
+        <form className="stack protected-form" method="post" action="/api/access">
+          <input type="hidden" name="slug" value={slug} />
+          <label className="field">
+            <span>Heslo</span>
+            <input name="password" type="password" autoComplete="current-password" required />
+          </label>
+          <button className="button button-primary" type="submit">
+            Odemknout odkaz
+          </button>
+        </form>
+      </section>
+    </main>
+  )
+}
+
+export default function EmbedPage({ embed, requiresPassword, slug, error }) {
   const [showFallback, setShowFallback] = useState(false)
+  const [hasLoaded, setHasLoaded] = useState(false)
 
   useEffect(() => {
-    const timeout = window.setTimeout(() => {
+    if (requiresPassword || !embed) {
+      return undefined
+    }
+
+    const showTimer = window.setTimeout(() => {
+      if (hasLoaded) {
+        return
+      }
+
       setShowFallback(true)
     }, 2000)
 
-    return () => window.clearTimeout(timeout)
-  }, [])
+    const hideTimer = window.setTimeout(() => {
+      setShowFallback(false)
+    }, 4000)
+
+    return () => {
+      window.clearTimeout(showTimer)
+      window.clearTimeout(hideTimer)
+    }
+  }, [embed, hasLoaded, requiresPassword])
 
   if (!embed) {
     return (
@@ -50,6 +92,18 @@ export default function EmbedPage({ embed }) {
     )
   }
 
+  if (requiresPassword) {
+    return (
+      <>
+        <Head>
+          <title>{slug} | Ofiko Poradatel</title>
+          <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,noimageindex" />
+        </Head>
+        <ProtectedPage slug={slug} error={error} />
+      </>
+    )
+  }
+
   return (
     <>
       <Head>
@@ -64,7 +118,10 @@ export default function EmbedPage({ embed }) {
           title={embed.slug}
           allow="clipboard-read; clipboard-write"
           loading="eager"
-          onLoad={() => setShowFallback(false)}
+          onLoad={() => {
+            setHasLoaded(true)
+            setShowFallback(false)
+          }}
         />
 
         {showFallback ? (
@@ -80,21 +137,33 @@ export default function EmbedPage({ embed }) {
   )
 }
 
-export async function getServerSideProps({ params, res }) {
+export async function getServerSideProps({ params, req, res, query }) {
   res.setHeader(
     'Cache-Control',
     'private, no-store, no-cache, max-age=0, must-revalidate'
   )
 
-  const embed = await getEmbedBySlug(params.slug)
+  const embed = await getEmbedBySlug(params.slug, { includeSecrets: true })
 
   if (!embed) {
     res.statusCode = 404
   }
 
+  const slug = params.slug
+  const requiresPassword =
+    Boolean(embed?.passwordHash) && !hasLinkAccess(req, embed.slug)
+  const error = Array.isArray(query.error) ? query.error[0] : query.error || ''
+
+  if (embed?.passwordHash) {
+    delete embed.passwordHash
+  }
+
   return {
     props: {
       embed,
+      slug,
+      requiresPassword,
+      error,
     },
   }
 }

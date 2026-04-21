@@ -17,6 +17,8 @@ export default async function handler(req, res) {
     await saveEmbed({
       slug: req.body.slug,
       url: req.body.url,
+      password: req.body.password,
+      removePassword: req.body.removePassword,
     })
 
     res.writeHead(302, {
