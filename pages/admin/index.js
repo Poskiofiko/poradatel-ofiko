@@ -42,6 +42,75 @@ function LoginView({ error }) {
   )
 }
 
+function ArchiveSection({ title, items, baseUrl, archived }) {
+  return (
+    <div className="panel">
+      <div className="panel-header">
+        <div>
+          <p className="eyebrow">{archived ? 'Archivovane odkazy' : 'Aktivni odkazy'}</p>
+          <h2>{title}</h2>
+        </div>
+        <span className="badge">{items.length}</span>
+      </div>
+
+      {items.length === 0 ? (
+        <p className="muted">
+          {archived
+            ? 'Archiv je zatim prazdny.'
+            : 'Zatim tu neni zadny ulozeny embed.'}
+        </p>
+      ) : (
+        <div className="embed-list">
+          {items.map((embed) => (
+            <article className="embed-item" key={embed.slug}>
+              <div className="embed-meta">
+                <p className="embed-label">Verejna adresa</p>
+                <Link href={`/${embed.slug}`}>{`${baseUrl}/${embed.slug}`}</Link>
+                <p className="embed-flag">
+                  {embed.passwordProtected ? 'Chraneno heslem' : 'Bez hesla'}
+                </p>
+                {embed.archived ? (
+                  <p className="embed-flag embed-flag--muted">Archivovano</p>
+                ) : null}
+                <p className="embed-label">Cilova URL</p>
+                <p>{embed.url}</p>
+              </div>
+
+              <div className="embed-actions">
+                <Link
+                  className="button button-secondary"
+                  href={`/admin?slug=${encodeURIComponent(embed.slug)}&url=${encodeURIComponent(embed.url)}&protected=${embed.passwordProtected ? '1' : '0'}`}
+                >
+                  Upravit
+                </Link>
+
+                <form method="post" action="/api/admin/archive">
+                  <input type="hidden" name="slug" value={embed.slug} />
+                  <input
+                    type="hidden"
+                    name="archived"
+                    value={archived ? '0' : '1'}
+                  />
+                  <button className="button button-secondary" type="submit">
+                    {archived ? 'Obnovit' : 'Archivovat'}
+                  </button>
+                </form>
+
+                <form method="post" action="/api/admin/delete">
+                  <input type="hidden" name="slug" value={embed.slug} />
+                  <button className="button button-danger" type="submit">
+                    Smazat
+                  </button>
+                </form>
+              </div>
+            </article>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function DashboardView({
   embeds,
   message,
@@ -51,6 +120,9 @@ function DashboardView({
   initialUrl,
   initialProtected,
 }) {
+  const activeEmbeds = embeds.filter((embed) => !embed.archived)
+  const archivedEmbeds = embeds.filter((embed) => embed.archived)
+
   return (
     <section className="admin-layout">
       <div className="panel">
@@ -123,50 +195,19 @@ function DashboardView({
         </form>
       </div>
 
-      <div className="panel">
-        <div className="panel-header">
-          <div>
-            <p className="eyebrow">Aktivni odkazy</p>
-            <h2>Slug seznam</h2>
-          </div>
-          <span className="badge">{embeds.length}</span>
-        </div>
-
-        {embeds.length === 0 ? (
-          <p className="muted">Zatim tu neni zadny ulozeny embed.</p>
-        ) : (
-          <div className="embed-list">
-            {embeds.map((embed) => (
-              <article className="embed-item" key={embed.slug}>
-                <div className="embed-meta">
-                  <p className="embed-label">Verejna adresa</p>
-                  <Link href={`/${embed.slug}`}>{`${baseUrl}/${embed.slug}`}</Link>
-                  <p className="embed-flag">
-                    {embed.passwordProtected ? 'Chraneno heslem' : 'Bez hesla'}
-                  </p>
-                  <p className="embed-label">Cilova URL</p>
-                  <p>{embed.url}</p>
-                </div>
-
-                <div className="embed-actions">
-                  <Link
-                    className="button button-secondary"
-                    href={`/admin?slug=${encodeURIComponent(embed.slug)}&url=${encodeURIComponent(embed.url)}&protected=${embed.passwordProtected ? '1' : '0'}`}
-                  >
-                    Upravit
-                  </Link>
-
-                  <form method="post" action="/api/admin/delete">
-                    <input type="hidden" name="slug" value={embed.slug} />
-                    <button className="button button-danger" type="submit">
-                      Smazat
-                    </button>
-                  </form>
-                </div>
-              </article>
-            ))}
-          </div>
-        )}
+      <div className="admin-side">
+        <ArchiveSection
+          title="Slug seznam"
+          items={activeEmbeds}
+          baseUrl={baseUrl}
+          archived={false}
+        />
+        <ArchiveSection
+          title="Odlozene linky"
+          items={archivedEmbeds}
+          baseUrl={baseUrl}
+          archived
+        />
       </div>
     </section>
   )
