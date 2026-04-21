@@ -1,6 +1,6 @@
 import Head from 'next/head'
 import Link from 'next/link'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { getBaseUrlFromRequest } from '../../lib/config'
 import { getSessionFromRequest } from '../../lib/auth'
@@ -57,6 +57,40 @@ function SummaryCard({ label, value, tone = 'default' }) {
       <p>{label}</p>
       <strong>{value}</strong>
     </article>
+  )
+}
+
+function ToastStack({ toasts, onDismiss }) {
+  if (toasts.length === 0) {
+    return null
+  }
+
+  return (
+    <div className="toast-stack" aria-live="polite" aria-atomic="true">
+      {toasts.map((toast) => (
+        <article key={toast.id} className={`toast toast--${toast.type}`}>
+          <div>
+            <strong>{toast.title}</strong>
+            <p>{toast.message}</p>
+          </div>
+          <button type="button" className="toast-close" onClick={() => onDismiss(toast.id)}>
+            Zavrit
+          </button>
+        </article>
+      ))}
+    </div>
+  )
+}
+
+function ActivityBanner({ text, detail, tone = 'idle' }) {
+  return (
+    <section className={`activity-banner activity-banner--${tone}`}>
+      <div className="activity-dot" />
+      <div>
+        <strong>{text}</strong>
+        <p>{detail}</p>
+      </div>
+    </section>
   )
 }
 
@@ -406,6 +440,12 @@ function DashboardView({
   const [pendingMap, setPendingMap] = useState({})
   const [bulkPending, setBulkPending] = useState(false)
   const [savePending, setSavePending] = useState(false)
+  const [toasts, setToasts] = useState([])
+  const [activity, setActivity] = useState({
+    tone: 'idle',
+    text: 'Dashboard je pripraveny',
+    detail: 'Muzes hledat, upravovat, archivovat nebo vytvaret nove odkazy.',
+  })
 
   const summary = {
     total: items.length,
@@ -470,6 +510,27 @@ function DashboardView({
     setStatusError('')
   }
 
+  function pushToast(type, title, message) {
+    const id = `${Date.now()}-${Math.random()}`
+    setToasts((current) => [...current, { id, type, title, message }])
+    window.setTimeout(() => {
+      setToasts((current) => current.filter((toast) => toast.id !== id))
+    }, 4200)
+  }
+
+  function dismissToast(id) {
+    setToasts((current) => current.filter((toast) => toast.id !== id))
+  }
+
+  useEffect(() => {
+    if (message) {
+      pushToast('success', 'Hotovo', message)
+    }
+    if (error) {
+      pushToast('error', 'Pozor', error)
+    }
+  }, [message, error])
+
   async function postAdminAction(url, payload) {
     const body =
       payload instanceof URLSearchParams
@@ -505,6 +566,18 @@ function DashboardView({
   async function handleCardAction(embed, actionName, payload) {
     clearFeedback()
     setPendingMap((current) => ({ ...current, [embed.slug]: actionName }))
+    setActivity({
+      tone: 'busy',
+      text: `Pracuju s odkazem ${embed.slug}`,
+      detail:
+        actionName === 'archive'
+          ? 'Presouvam zaznam mezi aktivnimi a archivem.'
+          : actionName === 'toggle'
+            ? 'Menim dostupnost odkazu pro navstevniky.'
+            : actionName === 'delete'
+              ? 'Mazu zaznam z dashboardu.'
+              : 'Vytvarim kopii odkazu se stejnym nastavenim.',
+    })
 
     try {
       if (actionName === 'archive') {
@@ -524,6 +597,7 @@ function DashboardView({
           setView('all')
         }
         setStatusMessage(data.message)
+        pushToast('success', 'Archivace hotova', data.message)
       } else if (actionName === 'toggle') {
         const data = await postAdminAction('/api/admin/toggle', payload)
         setItems((current) =>
@@ -532,23 +606,37 @@ function DashboardView({
           )
         )
         setStatusMessage(data.message)
+        pushToast('success', 'Stav zmenen', data.message)
       } else if (actionName === 'delete') {
         const data = await postAdminAction('/api/admin/delete', payload)
         setItems((current) => current.filter((item) => item.slug !== data.slug))
         setSelectedSlugs((current) => current.filter((slug) => slug !== data.slug))
         setStatusMessage(data.message)
+        pushToast('success', 'Zaznam smazan', data.message)
       } else if (actionName === 'duplicate') {
         const data = await postAdminAction('/api/admin/duplicate', payload)
         setItems((current) => [...current, data.embed])
         setStatusMessage(data.message)
+        pushToast('success', 'Kopie vytvorena', data.message)
       }
     } catch (actionError) {
       setStatusError(actionError.message)
+      setActivity({
+        tone: 'error',
+        text: 'Akce se nepovedla',
+        detail: actionError.message,
+      })
+      pushToast('error', 'Akce selhala', actionError.message)
     } finally {
       setPendingMap((current) => {
         const next = { ...current }
         delete next[embed.slug]
         return next
+      })
+      setActivity({
+        tone: 'idle',
+        text: 'Dashboard je pripraveny',
+        detail: 'Muzes pokracovat dalsi akci bez obnoveni stranky.',
       })
     }
   }
@@ -556,6 +644,11 @@ function DashboardView({
   async function handleBulkAction(action) {
     clearFeedback()
     setBulkPending(true)
+    setActivity({
+      tone: 'busy',
+      text: `Provadim hromadnou akci nad ${selectedSlugs.length} odkazy`,
+      detail: 'Akce probiha na pozadi, po dokonceni se seznam prepocita bez reloadu.',
+    })
 
     try {
       const data = await postAdminAction('/api/admin/bulk', {
@@ -593,10 +686,22 @@ function DashboardView({
 
       setSelectedSlugs([])
       setStatusMessage(data.message)
+      pushToast('success', 'Hromadna akce dokoncena', data.message)
     } catch (bulkError) {
       setStatusError(bulkError.message)
+      setActivity({
+        tone: 'error',
+        text: 'Hromadna akce se nepovedla',
+        detail: bulkError.message,
+      })
+      pushToast('error', 'Hromadna akce selhala', bulkError.message)
     } finally {
       setBulkPending(false)
+      setActivity({
+        tone: 'idle',
+        text: 'Dashboard je pripraveny',
+        detail: 'Vyber byl zpracovan a muzes pokracovat dal.',
+      })
     }
   }
 
@@ -604,6 +709,14 @@ function DashboardView({
     event.preventDefault()
     clearFeedback()
     setSavePending(true)
+    setActivity({
+      tone: 'busy',
+      text: 'Ukladam zmeny formulare',
+      detail:
+        initialSlug || initialUrl
+          ? 'Aktualizuji zaznam, kontroluji metadata a ukladam nastaveni hesla.'
+          : 'Zakladam novy verejny odkaz a pripravuji ho do seznamu.',
+    })
 
     try {
       const formData = new FormData(event.currentTarget)
@@ -622,8 +735,20 @@ function DashboardView({
       })
 
       setStatusMessage(data.message)
+      pushToast('success', 'Ulozeno', data.message)
+      setActivity({
+        tone: 'success',
+        text: 'Zmeny byly ulozeny',
+        detail: 'Seznam i statistiky byly aktualizovany bez obnoveni stranky.',
+      })
     } catch (saveError) {
       setStatusError(saveError.message)
+      setActivity({
+        tone: 'error',
+        text: 'Ukladani selhalo',
+        detail: saveError.message,
+      })
+      pushToast('error', 'Ulozeni se nepovedlo', saveError.message)
     } finally {
       setSavePending(false)
     }
@@ -652,6 +777,8 @@ function DashboardView({
 
   return (
     <section className="dashboard-shell">
+      <ToastStack toasts={toasts} onDismiss={dismissToast} />
+
       <div className="dashboard-top panel">
         <div>
           <p className="eyebrow">Ofiko Poradatel</p>
@@ -672,6 +799,12 @@ function DashboardView({
           </form>
         </div>
       </div>
+
+      <ActivityBanner
+        tone={activity.tone}
+        text={activity.text}
+        detail={activity.detail}
+      />
 
       <div className="summary-grid">
         <SummaryCard label="Celkem odkazu" value={summary.total} />
