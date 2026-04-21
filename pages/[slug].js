@@ -5,13 +5,46 @@ import { useEffect, useState } from 'react'
 import { hasLinkAccess } from '../lib/auth'
 import { getEmbedBySlug, incrementEmbedView } from '../lib/store'
 
+function PublicHead({ title }) {
+  return (
+    <Head>
+      <title>{title}</title>
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+      <link rel="preconnect" href="https://fonts.googleapis.com" />
+      <link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap"
+      />
+      <link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/icon?family=Material+Icons"
+      />
+      <link
+        rel="stylesheet"
+        href="https://cdn.levitio.com/fonts/silka/roman/stylesheet.css"
+      />
+      <link
+        rel="stylesheet"
+        href="https://cdn.levitio.com/fonts/silka/italic/stylesheet.css"
+      />
+      <meta
+        name="robots"
+        content="noindex,nofollow,noarchive,nosnippet,noimageindex"
+      />
+    </Head>
+  )
+}
+
 function ProtectedPage({ slug, error, title, description }) {
   return (
-    <main className="shell shell-home public-home">
-      <section className="panel centered-panel public-panel public-empty">
+    <main className="shell shell-home public-home public-lock-shell">
+      <section className="panel centered-panel public-panel public-empty public-lock-panel">
+        <div className="public-lock-icon" aria-hidden="true">
+          <span className="material-icons">lock</span>
+        </div>
         <p className="eyebrow">Chraneny odkaz</p>
         <h1>{title}</h1>
-        <p className="muted">{description}</p>
+        <p className="muted public-lock-copy">{description}</p>
         {error ? <p className="error-box">{error}</p> : null}
         <form className="stack protected-form" method="post" action="/api/access">
           <input type="hidden" name="slug" value={slug} />
@@ -20,9 +53,15 @@ function ProtectedPage({ slug, error, title, description }) {
             <input name="password" type="password" autoComplete="current-password" required />
           </label>
           <button className="button button-primary" type="submit">
+            <span className="material-icons button-inline-icon" aria-hidden="true">
+              key
+            </span>
             Odemknout odkaz
           </button>
         </form>
+        <p className="public-lock-footnote">
+          Odkaz je dostupny pouze pro lidi, kteri maji spravne heslo.
+        </p>
       </section>
     </main>
   )
@@ -65,10 +104,7 @@ export default function EmbedPage({
   if (!embed) {
     return (
       <>
-        <Head>
-          <title>Odkaz nenalezen | Ofiko Poradatel</title>
-          <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,noimageindex" />
-        </Head>
+        <PublicHead title="Odkaz nenalezen | Ofiko Poradatel" />
 
         <main className="shell shell-home public-home">
           <section className="panel centered-panel public-panel public-empty">
@@ -100,10 +136,7 @@ export default function EmbedPage({
   if (requiresPassword) {
     return (
       <>
-        <Head>
-          <title>{slug} | Ofiko Poradatel</title>
-          <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,noimageindex" />
-        </Head>
+        <PublicHead title={`${slug} | Ofiko Poradatel`} />
         <ProtectedPage
           slug={slug}
           error={error}
@@ -116,10 +149,7 @@ export default function EmbedPage({
 
   return (
     <>
-      <Head>
-        <title>{embed.slug} | Ofiko Poradatel</title>
-        <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,noimageindex" />
-      </Head>
+      <PublicHead title={`${embed.slug} | Ofiko Poradatel`} />
 
       <main className="embed-page">
         <iframe
