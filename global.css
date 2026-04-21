@@ -1634,13 +1634,16 @@ body {
 
 .admin-shell-app .summary-grid {
   grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
 }
 
 .admin-shell-app .summary-card {
-  min-height: 82px;
-  border-radius: 10px;
-  background: #fff;
+  min-height: 88px;
+  border-radius: 24px;
+  background: linear-gradient(180deg, #ffffff, #f8faff);
   border: 1px solid #e3e8ee;
+  padding: 18px;
+  box-shadow: 0 2px 10px rgba(37, 58, 94, 0.06);
 }
 
 .admin-shell-app .summary-card p {
@@ -1662,7 +1665,7 @@ body {
 .admin-shell-app .form-panel,
 .admin-shell-app .records-table-head,
 .admin-shell-app .empty-state {
-  border-radius: 10px;
+  border-radius: 24px;
 }
 
 .admin-shell-app .activity-banner {
@@ -1679,8 +1682,12 @@ body {
 .admin-shell-app .toolbar-panel,
 .admin-shell-app .records-table-head,
 .admin-shell-app .record-card {
-  background: #fff;
+  background: linear-gradient(180deg, #ffffff, #fcfdff);
   border-color: #e1e6ee;
+}
+
+.mobile-section-tabs {
+  display: none;
 }
 
 .editor-status-bar {
@@ -1790,9 +1797,10 @@ body {
 
 .admin-shell-app .record-card {
   padding: 12px 14px;
-  border-radius: 0;
+  border-radius: 24px;
   border-bottom: 1px solid #ebeff4;
   box-shadow: none;
+  margin-bottom: 10px;
 }
 
 .admin-shell-app .record-card:hover {
@@ -2030,7 +2038,7 @@ body {
 :root[data-theme='dark'] .admin-shell-app .record-card,
 :root[data-theme='dark'] .admin-shell-app .summary-card,
 :root[data-theme='dark'] .admin-shell-app .records-table-head {
-  background: #273240;
+  background: linear-gradient(180deg, #273240, #25303c);
   border-color: #334050;
   color: #edf2f7;
 }
@@ -2155,34 +2163,213 @@ body {
 }
 
 @media (max-width: 760px) {
+  .shell-admin {
+    width: min(100vw - 12px, 1440px);
+    padding-top: 8px;
+    padding-bottom: 18px;
+  }
+
   .admin-shell-app {
     grid-template-columns: 1fr;
+    gap: 12px;
   }
 
   .admin-sidebar {
-    min-height: auto;
-    border-radius: 12px;
+    display: none;
   }
 
   .admin-workspace .dashboard-topbar {
-    border-radius: 12px;
+    border-radius: 28px;
+    padding: 14px 16px;
+    min-height: auto;
   }
 
-  .admin-shell-app .record-card,
-  .admin-shell-app .records-table-head {
-    border-radius: 10px;
+  .dashboard-topbar__left {
+    gap: 12px;
+  }
+
+  .dashboard-topbar__right {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .admin-workspace .dashboard-topbar h1 {
+    font-size: 1.35rem;
+  }
+
+  .admin-shell-app .dashboard-top {
+    padding: 18px 16px;
+    border-radius: 28px;
   }
 
   .admin-shell-app .summary-grid {
+    display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .admin-shell-app .summary-card {
+    min-height: 72px;
+    border-radius: 22px;
+    padding: 14px;
+  }
+
+  .admin-shell-app .summary-card p {
+    font-size: 0.74rem;
+  }
+
+  .admin-shell-app .summary-card strong {
+    font-size: 1.35rem;
+  }
+
+  .mobile-section-tabs {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .mobile-section-tab {
+    min-height: 60px;
+    border: 1px solid #dbe2ea;
+    border-radius: 22px;
+    background: linear-gradient(180deg, #ffffff, #f6f8fc);
+    color: #61758e;
+    display: grid;
+    place-items: center;
+    gap: 4px;
+    padding: 8px 10px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .mobile-section-tab__icon {
+    font-size: 20px;
+  }
+
+  .mobile-section-tab--active {
+    background: linear-gradient(180deg, #253a5e, #314b75);
+    border-color: #253a5e;
+    color: #fff;
+    box-shadow: 0 10px 24px rgba(37, 58, 94, 0.22);
+  }
+
+  .admin-layout--wide {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .admin-pane {
+    display: none;
+  }
+
+  .admin-pane--active {
+    display: block;
+  }
+
+  .insight-grid,
+  .records-column {
+    display: none;
+  }
+
+  .insight-grid--mobile-active,
+  .records-column--mobile-active {
+    display: grid;
+  }
+
+  .admin-shell-app .form-panel,
+  .admin-shell-app .toolbar-panel,
+  .insight-panel,
+  .admin-shell-app .record-card,
+  .admin-shell-app .empty-state {
+    border-radius: 28px;
+    padding: 16px;
+  }
+
+  .quick-filter-bar {
+    gap: 10px;
+  }
+
+  .quick-filter-bar__chips {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    width: 100%;
+  }
+
+  .quick-filter-chip {
+    flex: 0 0 auto;
+    min-height: 42px;
+    padding: 0 14px;
+  }
+
+  .quick-filter-bar__meta {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .toolbar-row {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .toolbar-row--compact {
+    gap: 10px;
+  }
+
+  .record-summary {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .record-summary__meta {
+    gap: 8px;
   }
 
   .record-summary__actions {
-    justify-content: flex-start;
+    justify-content: stretch;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .record-badges {
+    gap: 8px;
+  }
+
+  .admin-shell-app .record-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
   }
 
   .field-action-row {
     grid-template-columns: 1fr;
+  }
+
+  .admin-user-chip {
+    padding-right: 10px;
+  }
+
+  .button-inline {
+    width: 100%;
+  }
+
+  :root[data-theme='dark'] .mobile-section-tab {
+    background: linear-gradient(180deg, #273240, #22303d);
+    border-color: #364356;
+    color: #b8c4d3;
+  }
+
+  :root[data-theme='dark'] .mobile-section-tab--active {
+    background: linear-gradient(180deg, #73a9dc, #538ec6);
+    border-color: #73a9dc;
+    color: #142536;
+  }
+
+  :root[data-theme='dark'] .admin-shell-app .summary-card,
+  :root[data-theme='dark'] .admin-shell-app .form-panel,
+  :root[data-theme='dark'] .admin-shell-app .toolbar-panel,
+  :root[data-theme='dark'] .insight-panel,
+  :root[data-theme='dark'] .admin-shell-app .record-card {
+    background: linear-gradient(180deg, #273240, #25303c);
   }
 }
 

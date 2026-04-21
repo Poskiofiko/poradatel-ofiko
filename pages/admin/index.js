@@ -112,6 +112,30 @@ function SummaryCard({ label, value, tone = 'default' }) {
   )
 }
 
+function MobileSectionTabs({ activePane, onChange }) {
+  const items = [
+    { id: 'list', label: 'Odkazy', icon: 'view_list' },
+    { id: 'editor', label: 'Editor', icon: 'edit_square' },
+    { id: 'insights', label: 'Prehled', icon: 'insights' },
+  ]
+
+  return (
+    <div className="mobile-section-tabs" aria-label="Mobilni sekce">
+      {items.map((item) => (
+        <button
+          key={item.id}
+          type="button"
+          className={`mobile-section-tab ${activePane === item.id ? 'mobile-section-tab--active' : ''}`}
+          onClick={() => onChange(item.id)}
+        >
+          <AdminIcon name={item.icon} className="mobile-section-tab__icon" />
+          <span>{item.label}</span>
+        </button>
+      ))}
+    </div>
+  )
+}
+
 function QuickFilterBar({ view, onChangeView, query, hasSelection, onClearFilters }) {
   const filters = [
     { id: 'active', label: 'Aktivni' },
@@ -402,10 +426,14 @@ function RecordCard({
               <Badge tone={embed.archived ? 'muted' : 'success'}>
                 {embed.archived ? 'Archiv' : 'Aktivni'}
               </Badge>
-              <Badge tone={embed.isEnabled ? 'success' : 'warning'}>
-                {embed.isEnabled ? 'Zapnuto' : 'Vypnuto'}
-              </Badge>
-              {embed.category ? <Badge tone="default">{embed.category}</Badge> : null}
+              {expanded ? (
+                <>
+                  <Badge tone={embed.isEnabled ? 'success' : 'warning'}>
+                    {embed.isEnabled ? 'Zapnuto' : 'Vypnuto'}
+                  </Badge>
+                  {embed.category ? <Badge tone="default">{embed.category}</Badge> : null}
+                </>
+              ) : null}
             </div>
             <p className="record-muted">Upraveno: {formatDate(embed.updatedAt)}</p>
             <p className="record-muted">Otevreni: {embed.viewCount}</p>
@@ -677,6 +705,7 @@ function DashboardView({
   const [draftSlug, setDraftSlug] = useState(initialSlug)
   const [draftUrl, setDraftUrl] = useState(initialUrl)
   const [draftPassword, setDraftPassword] = useState('')
+  const [activePane, setActivePane] = useState(initialSlug ? 'editor' : 'list')
   const [toasts, setToasts] = useState([])
   const [activity, setActivity] = useState({
     tone: 'idle',
@@ -1198,6 +1227,8 @@ function DashboardView({
         <SummaryCard label="Expirovane" value={summary.expired} tone="danger" />
       </div>
 
+      <MobileSectionTabs activePane={activePane} onChange={setActivePane} />
+
       <QuickFilterBar
         view={view}
         onChangeView={setView}
@@ -1214,7 +1245,7 @@ function DashboardView({
       />
 
       <div className="admin-layout admin-layout--wide">
-        <div className="panel form-panel">
+        <div className={`panel form-panel admin-pane ${activePane === 'editor' ? 'admin-pane--active' : ''}`}>
           <div className="panel-header">
             <div>
               <p className="eyebrow">Editor odkazu</p>
@@ -1373,7 +1404,7 @@ function DashboardView({
           </form>
         </div>
 
-        <div className="admin-side">
+        <div className={`admin-side admin-pane ${activePane === 'list' || activePane === 'insights' ? 'admin-pane--active' : ''}`}>
           <div className="panel toolbar-panel">
             <div className="toolbar-row">
               <label className="field">
@@ -1419,12 +1450,12 @@ function DashboardView({
             </div>
           </div>
 
-          <div className="insight-grid">
+          <div className={`insight-grid ${activePane === 'insights' ? 'insight-grid--mobile-active' : ''}`}>
             <SmartInsights expiringSoon={expiringSoon} dormantEmbeds={dormantEmbeds} />
             <ActivityList entries={recentActivity} />
           </div>
 
-          <div className="records-column">
+          <div className={`records-column ${activePane === 'list' ? 'records-column--mobile-active' : ''}`}>
             <div className="records-table-head panel">
               <span>Vyber</span>
               <span>Verejna adresa</span>
