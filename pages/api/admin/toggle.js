@@ -8,6 +8,9 @@ export default async function handler(req, res) {
   }
 
   if (!isAuthenticatedRequest(req)) {
+    if (req.headers['x-admin-json'] === '1') {
+      return res.status(401).json({ error: 'Nejsi prihlaseny' })
+    }
     res.writeHead(302, { Location: '/admin?error=Nejsi%20prihlaseny' })
     res.end()
     return
@@ -15,6 +18,16 @@ export default async function handler(req, res) {
 
   const isEnabled = req.body.isEnabled === '1'
   await setEmbedEnabled(req.body.slug, isEnabled)
+
+  if (req.headers['x-admin-json'] === '1') {
+    return res.status(200).json({
+      ok: true,
+      slug: req.body.slug,
+      isEnabled,
+      message: isEnabled ? 'Odkaz byl zapnut' : 'Odkaz byl vypnut',
+    })
+  }
+
   const view = encodeURIComponent(req.body.view || 'all')
 
   res.writeHead(302, {

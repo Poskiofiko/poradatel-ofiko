@@ -84,7 +84,15 @@ function Badge({ children, tone = 'default' }) {
   return <span className={`embed-flag embed-flag--${tone}`}>{children}</span>
 }
 
-function RecordCard({ embed, baseUrl, selected, onToggleSelect, currentView }) {
+function RecordCard({
+  embed,
+  baseUrl,
+  selected,
+  onToggleSelect,
+  currentView,
+  onAction,
+  pendingAction,
+}) {
   const publicUrl = `${baseUrl}/${embed.slug}`
   const confirmDelete =
     'Opravdu chces tenhle odkaz smazat? Tohle nejde vratit zpet.'
@@ -94,6 +102,15 @@ function RecordCard({ embed, baseUrl, selected, onToggleSelect, currentView }) {
   const confirmEnable = embed.isEnabled
     ? 'Docasne vypnout tenhle odkaz?'
     : 'Znovu povolit tenhle odkaz?'
+  const isBusy = Boolean(pendingAction)
+
+  async function runAction(actionName, payload, confirmation) {
+    if (confirmation && !window.confirm(confirmation)) {
+      return
+    }
+
+    await onAction(embed, actionName, payload)
+  }
 
   return (
     <article className={`record-card ${selected ? 'record-card--selected' : ''}`}>
@@ -215,13 +232,14 @@ function RecordCard({ embed, baseUrl, selected, onToggleSelect, currentView }) {
             Upravit
           </Link>
 
-          <form method="post" action="/api/admin/duplicate">
-            <input type="hidden" name="slug" value={embed.slug} />
-            <input type="hidden" name="view" value={currentView} />
-            <button className="button button-secondary" type="submit">
-              Duplikovat
-            </button>
-          </form>
+          <button
+            className="button button-secondary"
+            type="button"
+            disabled={isBusy}
+            onClick={() => runAction('duplicate', { slug: embed.slug, view: currentView })}
+          >
+            {pendingAction === 'duplicate' ? 'Duplikuji...' : 'Duplikovat'}
+          </button>
 
           <a className="button button-secondary" href={publicUrl} target="_blank" rel="noreferrer">
             Nahled
@@ -231,103 +249,135 @@ function RecordCard({ embed, baseUrl, selected, onToggleSelect, currentView }) {
             Otevrit cil
           </a>
 
-          <form method="post" action="/api/admin/archive">
-            <input type="hidden" name="slug" value={embed.slug} />
-            <input type="hidden" name="archived" value={embed.archived ? '0' : '1'} />
-            <input type="hidden" name="view" value={currentView} />
-            <button
-              className="button button-secondary"
-              type="submit"
-              onClick={(event) => {
-                if (!window.confirm(confirmArchive)) {
-                  event.preventDefault()
-                }
-              }}
-            >
-              {embed.archived ? 'Obnovit' : 'Archivovat'}
-            </button>
-          </form>
+          <button
+            className="button button-secondary"
+            type="button"
+            disabled={isBusy}
+            onClick={() =>
+              runAction(
+                'archive',
+                {
+                  slug: embed.slug,
+                  archived: embed.archived ? '0' : '1',
+                  view: currentView,
+                },
+                confirmArchive
+              )
+            }
+          >
+            {pendingAction === 'archive'
+              ? embed.archived
+                ? 'Obnovuji...'
+                : 'Archivuji...'
+              : embed.archived
+                ? 'Obnovit'
+                : 'Archivovat'}
+          </button>
 
-          <form method="post" action="/api/admin/toggle">
-            <input type="hidden" name="slug" value={embed.slug} />
-            <input type="hidden" name="isEnabled" value={embed.isEnabled ? '0' : '1'} />
-            <input type="hidden" name="view" value={currentView} />
-            <button
-              className="button button-secondary"
-              type="submit"
-              onClick={(event) => {
-                if (!window.confirm(confirmEnable)) {
-                  event.preventDefault()
-                }
-              }}
-            >
-              {embed.isEnabled ? 'Vypnout' : 'Zapnout'}
-            </button>
-          </form>
+          <button
+            className="button button-secondary"
+            type="button"
+            disabled={isBusy}
+            onClick={() =>
+              runAction(
+                'toggle',
+                {
+                  slug: embed.slug,
+                  isEnabled: embed.isEnabled ? '0' : '1',
+                  view: currentView,
+                },
+                confirmEnable
+              )
+            }
+          >
+            {pendingAction === 'toggle'
+              ? embed.isEnabled
+                ? 'Vypinam...'
+                : 'Zapinam...'
+              : embed.isEnabled
+                ? 'Vypnout'
+                : 'Zapnout'}
+          </button>
 
-          <form method="post" action="/api/admin/delete">
-            <input type="hidden" name="slug" value={embed.slug} />
-            <input type="hidden" name="view" value={currentView} />
-            <button
-              className="button button-danger"
-              type="submit"
-              onClick={(event) => {
-                if (!window.confirm(confirmDelete)) {
-                  event.preventDefault()
-                }
-              }}
-            >
-              Smazat
-            </button>
-          </form>
+          <button
+            className="button button-danger"
+            type="button"
+            disabled={isBusy}
+            onClick={() =>
+              runAction(
+                'delete',
+                { slug: embed.slug, view: currentView },
+                confirmDelete
+              )
+            }
+          >
+            {pendingAction === 'delete' ? 'Mazani...' : 'Smazat'}
+          </button>
         </div>
       </div>
     </article>
   )
 }
 
-function BulkBar({ selectedSlugs, activeView }) {
+function BulkBar({ selectedSlugs, activeView, onBulkAction, pending }) {
   if (selectedSlugs.length === 0) {
     return null
   }
 
   return (
-    <form className="bulk-bar panel" method="post" action="/api/admin/bulk">
-      {selectedSlugs.map((slug) => (
-        <input key={slug} type="hidden" name="slug" value={slug} />
-      ))}
+    <div className="bulk-bar panel">
       <p>
         Vybrano <strong>{selectedSlugs.length}</strong> odkazu
       </p>
       <div className="bulk-actions">
-        <button className="button button-secondary" type="submit" name="action" value="archive">
+        <button
+          className="button button-secondary"
+          type="button"
+          disabled={pending}
+          onClick={() => onBulkAction('archive')}
+        >
           Archivovat
         </button>
-        <button className="button button-secondary" type="submit" name="action" value="restore">
+        <button
+          className="button button-secondary"
+          type="button"
+          disabled={pending}
+          onClick={() => onBulkAction('restore')}
+        >
           Obnovit
         </button>
-        <button className="button button-secondary" type="submit" name="action" value="enable">
+        <button
+          className="button button-secondary"
+          type="button"
+          disabled={pending}
+          onClick={() => onBulkAction('enable')}
+        >
           Zapnout
         </button>
-        <button className="button button-secondary" type="submit" name="action" value="disable">
+        <button
+          className="button button-secondary"
+          type="button"
+          disabled={pending}
+          onClick={() => onBulkAction('disable')}
+        >
           Vypnout
         </button>
         <button
           className="button button-danger"
-          type="submit"
-          name="action"
-          value="delete"
-          onClick={(event) => {
+          type="button"
+          disabled={pending}
+          onClick={() => {
             if (!window.confirm('Opravdu chces hromadne smazat vybrane odkazy?')) {
-              event.preventDefault()
+              return
             }
+
+            onBulkAction('delete')
           }}
         >
-          Smazat
+          {pending ? 'Provadim...' : 'Smazat'}
         </button>
       </div>
-      <input type="hidden" name="view" value={activeView} />
-    </form>
+    </div>
   )
 }
 
@@ -346,23 +396,29 @@ function DashboardView({
   initialEnabled,
   initialView,
 }) {
+  const [items, setItems] = useState(embeds)
   const [query, setQuery] = useState('')
   const [view, setView] = useState(initialView)
   const [sortBy, setSortBy] = useState('updated-desc')
   const [selectedSlugs, setSelectedSlugs] = useState([])
+  const [statusMessage, setStatusMessage] = useState(message)
+  const [statusError, setStatusError] = useState(error)
+  const [pendingMap, setPendingMap] = useState({})
+  const [bulkPending, setBulkPending] = useState(false)
+  const [savePending, setSavePending] = useState(false)
 
   const summary = {
-    total: embeds.length,
-    active: embeds.filter((embed) => !embed.archived).length,
-    archived: embeds.filter((embed) => embed.archived).length,
-    protected: embeds.filter((embed) => embed.passwordProtected).length,
-    disabled: embeds.filter((embed) => !embed.isEnabled).length,
-    expired: embeds.filter(
+    total: items.length,
+    active: items.filter((embed) => !embed.archived).length,
+    archived: items.filter((embed) => embed.archived).length,
+    protected: items.filter((embed) => embed.passwordProtected).length,
+    disabled: items.filter((embed) => !embed.isEnabled).length,
+    expired: items.filter(
       (embed) => embed.expiresAt && new Date(embed.expiresAt).getTime() < Date.now()
     ).length,
   }
 
-  let filtered = embeds.filter((embed) => {
+  let filtered = items.filter((embed) => {
     if (view === 'active' && embed.archived) {
       return false
     }
@@ -408,6 +464,170 @@ function DashboardView({
 
   const allVisibleSelected =
     filtered.length > 0 && filtered.every((embed) => selectedSlugs.includes(embed.slug))
+
+  function clearFeedback() {
+    setStatusMessage('')
+    setStatusError('')
+  }
+
+  async function postAdminAction(url, payload) {
+    const body =
+      payload instanceof URLSearchParams
+        ? payload
+        : Object.entries(payload).reduce((params, [key, value]) => {
+            if (Array.isArray(value)) {
+              value.forEach((item) => params.append(key, item))
+            } else if (value !== undefined && value !== null) {
+              params.append(key, value)
+            }
+
+            return params
+          }, new URLSearchParams())
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+        'x-admin-json': '1',
+      },
+      body,
+    })
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      throw new Error(data.error || 'Akce se nepodarila')
+    }
+
+    return data
+  }
+
+  async function handleCardAction(embed, actionName, payload) {
+    clearFeedback()
+    setPendingMap((current) => ({ ...current, [embed.slug]: actionName }))
+
+    try {
+      if (actionName === 'archive') {
+        const data = await postAdminAction('/api/admin/archive', payload)
+        setItems((current) =>
+          current.map((item) =>
+            item.slug === embed.slug
+              ? {
+                  ...item,
+                  archived: data.archived,
+                  archivedAt: data.archived ? new Date().toISOString() : null,
+                }
+              : item
+          )
+        )
+        if (view === 'active' && data.archived) {
+          setView('all')
+        }
+        setStatusMessage(data.message)
+      } else if (actionName === 'toggle') {
+        const data = await postAdminAction('/api/admin/toggle', payload)
+        setItems((current) =>
+          current.map((item) =>
+            item.slug === embed.slug ? { ...item, isEnabled: data.isEnabled } : item
+          )
+        )
+        setStatusMessage(data.message)
+      } else if (actionName === 'delete') {
+        const data = await postAdminAction('/api/admin/delete', payload)
+        setItems((current) => current.filter((item) => item.slug !== data.slug))
+        setSelectedSlugs((current) => current.filter((slug) => slug !== data.slug))
+        setStatusMessage(data.message)
+      } else if (actionName === 'duplicate') {
+        const data = await postAdminAction('/api/admin/duplicate', payload)
+        setItems((current) => [...current, data.embed])
+        setStatusMessage(data.message)
+      }
+    } catch (actionError) {
+      setStatusError(actionError.message)
+    } finally {
+      setPendingMap((current) => {
+        const next = { ...current }
+        delete next[embed.slug]
+        return next
+      })
+    }
+  }
+
+  async function handleBulkAction(action) {
+    clearFeedback()
+    setBulkPending(true)
+
+    try {
+      const data = await postAdminAction('/api/admin/bulk', {
+        slug: selectedSlugs,
+        action,
+        view,
+      })
+
+      setItems((current) => {
+        if (action === 'delete') {
+          return current.filter((item) => !selectedSlugs.includes(item.slug))
+        }
+
+        return current.map((item) => {
+          if (!selectedSlugs.includes(item.slug)) {
+            return item
+          }
+
+          if (action === 'archive') {
+            return { ...item, archived: true, archivedAt: new Date().toISOString() }
+          }
+          if (action === 'restore') {
+            return { ...item, archived: false, archivedAt: null }
+          }
+          if (action === 'enable') {
+            return { ...item, isEnabled: true }
+          }
+          if (action === 'disable') {
+            return { ...item, isEnabled: false }
+          }
+
+          return item
+        })
+      })
+
+      setSelectedSlugs([])
+      setStatusMessage(data.message)
+    } catch (bulkError) {
+      setStatusError(bulkError.message)
+    } finally {
+      setBulkPending(false)
+    }
+  }
+
+  async function handleSave(event) {
+    event.preventDefault()
+    clearFeedback()
+    setSavePending(true)
+
+    try {
+      const formData = new FormData(event.currentTarget)
+      const payload = Object.fromEntries(formData.entries())
+      const data = await postAdminAction('/api/admin/embeds', payload)
+
+      setItems((current) => {
+        const existing = current.findIndex((item) => item.slug === data.embed.slug)
+        if (existing >= 0) {
+          const next = [...current]
+          next[existing] = { ...next[existing], ...data.embed }
+          return next
+        }
+
+        return [data.embed, ...current]
+      })
+
+      setStatusMessage(data.message)
+    } catch (saveError) {
+      setStatusError(saveError.message)
+    } finally {
+      setSavePending(false)
+    }
+  }
 
   function toggleSelect(slug) {
     setSelectedSlugs((current) =>
@@ -462,7 +682,12 @@ function DashboardView({
         <SummaryCard label="Expirovane" value={summary.expired} tone="danger" />
       </div>
 
-      <BulkBar selectedSlugs={selectedSlugs} activeView={view} />
+      <BulkBar
+        selectedSlugs={selectedSlugs}
+        activeView={view}
+        onBulkAction={handleBulkAction}
+        pending={bulkPending}
+      />
 
       <div className="admin-layout admin-layout--wide">
         <div className="panel form-panel">
@@ -473,10 +698,10 @@ function DashboardView({
             </div>
           </div>
 
-          {message ? <p className="success-box">{message}</p> : null}
-          {error ? <p className="error-box">{error}</p> : null}
+          {statusMessage ? <p className="success-box">{statusMessage}</p> : null}
+          {statusError ? <p className="error-box">{statusError}</p> : null}
 
-          <form className="stack" method="post" action="/api/admin/embeds">
+          <form className="stack" method="post" action="/api/admin/embeds" onSubmit={handleSave}>
             <input type="hidden" name="view" value={view} />
             <label className="field">
               <span>Slug</span>
@@ -566,8 +791,8 @@ function DashboardView({
               <span>Odebrat heslo z tohoto odkazu</span>
             </label>
 
-            <button className="button button-primary" type="submit">
-              Ulozit odkaz
+            <button className="button button-primary" type="submit" disabled={savePending}>
+              {savePending ? 'Ukladam...' : 'Ulozit odkaz'}
             </button>
           </form>
         </div>
@@ -613,7 +838,7 @@ function DashboardView({
                 {allVisibleSelected ? 'Odebrat vyber' : 'Vybrat vse viditelne'}
               </button>
               <p className="muted">
-                Zobrazeno <strong>{filtered.length}</strong> z <strong>{embeds.length}</strong> odkazu
+                Zobrazeno <strong>{filtered.length}</strong> z <strong>{items.length}</strong> odkazu
               </p>
             </div>
           </div>
@@ -636,6 +861,8 @@ function DashboardView({
                   selected={selectedSlugs.includes(embed.slug)}
                   onToggleSelect={toggleSelect}
                   currentView={view}
+                  onAction={handleCardAction}
+                  pendingAction={pendingMap[embed.slug]}
                 />
               ))
             )}
