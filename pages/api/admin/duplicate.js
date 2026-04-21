@@ -1,5 +1,5 @@
 import { isAuthenticatedRequest } from '../../../lib/auth'
-import { saveEmbed } from '../../../lib/store'
+import { duplicateEmbed } from '../../../lib/store'
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -14,20 +14,13 @@ export default async function handler(req, res) {
   }
 
   try {
-    await saveEmbed({
-      slug: req.body.slug,
-      url: req.body.url,
-      password: req.body.password,
-      removePassword: req.body.removePassword,
-      category: req.body.category,
-      note: req.body.note,
-      tags: req.body.tags,
-      expiresAt: req.body.expiresAt,
-      isEnabled: req.body.isEnabled,
-    })
-
+    const duplicated = await duplicateEmbed(req.body.slug)
     res.writeHead(302, {
-      Location: '/admin?message=Embed%20byl%20ulozen&view=all',
+      Location: `/admin?message=${encodeURIComponent(
+        `Vytvorena kopie ${duplicated.slug}`
+      )}&slug=${encodeURIComponent(duplicated.slug)}&url=${encodeURIComponent(
+        duplicated.url
+      )}&protected=${duplicated.passwordProtected ? '1' : '0'}`,
     })
     res.end()
   } catch (error) {

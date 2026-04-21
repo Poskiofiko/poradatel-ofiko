@@ -3,17 +3,15 @@ import Link from 'next/link'
 import { useEffect, useState } from 'react'
 
 import { hasLinkAccess } from '../lib/auth'
-import { getEmbedBySlug } from '../lib/store'
+import { getEmbedBySlug, incrementEmbedView } from '../lib/store'
 
-function ProtectedPage({ slug, error }) {
+function ProtectedPage({ slug, error, title, description }) {
   return (
     <main className="shell shell-home public-home">
       <section className="panel centered-panel public-panel public-empty">
         <p className="eyebrow">Chraneny odkaz</p>
-        <h1>Tenhle odkaz je pod heslem</h1>
-        <p className="muted">
-          Zadej heslo, ktere jsi dostal s odkazem. Po spravnem zadani se stranka otevre.
-        </p>
+        <h1>{title}</h1>
+        <p className="muted">{description}</p>
         {error ? <p className="error-box">{error}</p> : null}
         <form className="stack protected-form" method="post" action="/api/access">
           <input type="hidden" name="slug" value={slug} />
@@ -30,7 +28,14 @@ function ProtectedPage({ slug, error }) {
   )
 }
 
-export default function EmbedPage({ embed, requiresPassword, slug, error }) {
+export default function EmbedPage({
+  embed,
+  requiresPassword,
+  slug,
+  error,
+  lockedTitle,
+  lockedDescription,
+}) {
   const [showFallback, setShowFallback] = useState(false)
   const [hasLoaded, setHasLoaded] = useState(false)
 
@@ -99,7 +104,12 @@ export default function EmbedPage({ embed, requiresPassword, slug, error }) {
           <title>{slug} | Ofiko Poradatel</title>
           <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,noimageindex" />
         </Head>
-        <ProtectedPage slug={slug} error={error} />
+        <ProtectedPage
+          slug={slug}
+          error={error}
+          title={lockedTitle}
+          description={lockedDescription}
+        />
       </>
     )
   }
@@ -153,6 +163,27 @@ export async function getServerSideProps({ params, req, res, query }) {
   const requiresPassword =
     Boolean(embed?.passwordHash) && !hasLinkAccess(req, embed.slug)
   const error = Array.isArray(query.error) ? query.error[0] : query.error || ''
+  const isExpired =
+    Boolean(embed?.expiresAt) && new Date(embed.expiresAt).getTime() < Date.now()
+  const isDisabled = embed?.isEnabled === false
+
+  if (embed && !requiresPassword && !isExpired && !isDisabled) {
+    await incrementEmbedView(embed.slug)
+  }
+
+  let lockedTitle = 'Tenhle odkaz je pod heslem'
+  let lockedDescription =
+    'Zadej heslo, ktere jsi dostal s odkazem. Po spravnem zadani se stranka otevre.'
+
+  if (isDisabled) {
+    lockedTitle = 'Tenhle odkaz je docasne vypnuty'
+    lockedDescription =
+      'Organizator ho docasne vypnul. Pokud ho potrebujes otevrit, pozadej o novou aktivni adresu.'
+  } else if (isExpired) {
+    lockedTitle = 'Tenhle odkaz uz expiroval'
+    lockedDescription =
+      'Platnost odkazu skoncila. Pokud ho potrebujes znovu, pozadej o novou aktualni adresu.'
+  }
 
   if (embed?.passwordHash) {
     delete embed.passwordHash
@@ -162,8 +193,10 @@ export async function getServerSideProps({ params, req, res, query }) {
     props: {
       embed,
       slug,
-      requiresPassword,
+      requiresPassword: requiresPassword || isDisabled || isExpired,
       error,
+      lockedTitle,
+      lockedDescription,
     },
   }
 }
