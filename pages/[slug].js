@@ -1,6 +1,6 @@
 import Head from 'next/head'
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { hasLinkAccess } from '../lib/auth'
 import { getEmbedBySlug, incrementEmbedView } from '../lib/store'
@@ -19,18 +19,7 @@ function PublicHead({ title }) {
         rel="stylesheet"
         href="https://fonts.googleapis.com/icon?family=Material+Icons"
       />
-      <link
-        rel="stylesheet"
-        href="https://cdn.levitio.com/fonts/silka/roman/stylesheet.css"
-      />
-      <link
-        rel="stylesheet"
-        href="https://cdn.levitio.com/fonts/silka/italic/stylesheet.css"
-      />
-      <meta
-        name="robots"
-        content="noindex,nofollow,noarchive,nosnippet,noimageindex"
-      />
+      <meta name="robots" content="noindex,nofollow" />
     </Head>
   )
 }
@@ -39,29 +28,26 @@ function ProtectedPage({ slug, error, title, description }) {
   return (
     <main className="shell shell-home public-home public-lock-shell">
       <section className="panel centered-panel public-panel public-empty public-lock-panel">
-        <div className="public-lock-icon" aria-hidden="true">
+        <div className="public-lock-icon">
           <span className="material-icons">lock</span>
         </div>
         <p className="eyebrow">Chraneny odkaz</p>
         <h1>{title}</h1>
         <p className="muted public-lock-copy">{description}</p>
-        {error ? <p className="error-box">{error}</p> : null}
-        <form className="stack protected-form" method="post" action="/api/access">
+
+        {error && <p className="error-box">{error}</p>}
+
+        <form method="post" action="/api/access" className="stack protected-form">
           <input type="hidden" name="slug" value={slug} />
           <label className="field">
             <span>Heslo</span>
-            <input name="password" type="password" autoComplete="current-password" required />
+            <input name="password" type="password" required />
           </label>
-          <button className="button button-primary" type="submit">
-            <span className="material-icons button-inline-icon" aria-hidden="true">
-              key
-            </span>
-            Odemknout odkaz
+          <button className="button button-primary">
+            <span className="material-icons">key</span>
+            Odemknout
           </button>
         </form>
-        <p className="public-lock-footnote">
-          Odkaz je dostupny pouze pro lidi, kteri maji spravne heslo.
-        </p>
       </section>
     </main>
   )
@@ -75,58 +61,47 @@ export default function EmbedPage({
   lockedTitle,
   lockedDescription,
 }) {
-  const [showFallback, setShowFallback] = useState(false)
+  const iframeRef = useRef(null)
   const [hasLoaded, setHasLoaded] = useState(false)
+  const [showFallback, setShowFallback] = useState(false)
 
   useEffect(() => {
-    if (requiresPassword || !embed) {
-      return undefined
-    }
+    if (requiresPassword || !embed) return
 
-    const showTimer = window.setTimeout(() => {
-      if (hasLoaded) {
-        return
-      }
-
-      setShowFallback(true)
+    const showTimer = setTimeout(() => {
+      if (!hasLoaded) setShowFallback(true)
     }, 2000)
 
-    const hideTimer = window.setTimeout(() => {
+    const hideTimer = setTimeout(() => {
       setShowFallback(false)
     }, 4000)
 
     return () => {
-      window.clearTimeout(showTimer)
-      window.clearTimeout(hideTimer)
+      clearTimeout(showTimer)
+      clearTimeout(hideTimer)
     }
   }, [embed, hasLoaded, requiresPassword])
+
+  // 🔒 blokace pokusů o otevření nového okna (best effort)
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.target.tagName === 'A') {
+        e.preventDefault()
+      }
+    }
+
+    window.addEventListener('click', handler, true)
+    return () => window.removeEventListener('click', handler, true)
+  }, [])
 
   if (!embed) {
     return (
       <>
-        <PublicHead title="Odkaz nenalezen | Ofiko Poradatel" />
-
-        <main className="shell shell-home public-home">
-          <section className="panel centered-panel public-panel public-empty">
-            <p className="eyebrow">Odkaz nebyl nalezen</p>
-            <h1>Tahle stránka neexistuje</h1>
-            <p className="muted">
-              Zadaný odkaz není aktivní nebo byl napsaný špatně. Zkontroluj URL
-              a zkus to znovu.
-            </p>
-            <div className="hero-actions">
-              <Link className="primary-link" href="/">
-                Zpět na úvod
-              </Link>
-              <a
-                className="secondary-link"
-                href="https://ofiko.eu/kontakt"
-                target="_blank"
-                rel="noreferrer"
-              >
-                Kontakt Ofiko
-              </a>
-            </div>
+        <PublicHead title="Nenalezeno" />
+        <main className="shell shell-home">
+          <section className="panel centered-panel">
+            <h1>Stránka neexistuje</h1>
+            <Link href="/">Zpět</Link>
           </section>
         </main>
       </>
@@ -136,7 +111,7 @@ export default function EmbedPage({
   if (requiresPassword) {
     return (
       <>
-        <PublicHead title={`${slug} | Ofiko Poradatel`} />
+        <PublicHead title={slug} />
         <ProtectedPage
           slug={slug}
           error={error}
@@ -149,120 +124,88 @@ export default function EmbedPage({
 
   return (
     <>
-      <PublicHead title={`${embed.slug} | Ofiko Poradatel`} />
+      <PublicHead title={embed.slug} />
 
       <main className="embed-page">
-        <div
-          className={`embed-frame-shell ${
-            embed.renderMode === 'display' ? 'embed-frame-shell--display' : ''
-          }`}
-        >
+        <div className="embed-frame-shell">
           <iframe
-            className={`embed-frame ${
-              embed.renderMode === 'display' ? 'embed-frame--display' : ''
-            }`}
+            ref={iframeRef}
+            className="embed-frame"
             src={embed.url}
             title={embed.slug}
-            allow="clipboard-read; clipboard-write"
-            sandbox={
-              embed.renderMode === 'display'
-                ? 'allow-same-origin allow-scripts'
-                : undefined
-            }
             loading="eager"
             scrolling="yes"
+
+            /* 🔥 KLÍČOVÁ ČÁST */
+            sandbox="
+              allow-scripts
+              allow-same-origin
+              allow-forms
+            "
+
             onLoad={() => {
               setHasLoaded(true)
               setShowFallback(false)
             }}
           />
 
-          {embed.renderMode === 'display' ? (
-            <div
-              aria-hidden="true"
-              style={{
-                position: 'absolute',
-                top: '16px',
-                right: '16px',
-                zIndex: 3,
-                pointerEvents: 'none',
-              }}
-            >
-              <div className="embed-display-guard__badge">
-                <span className="material-icons">visibility</span>
-                Zobrazovaci rezim
-              </div>
+          {/* badge */}
+          <div
+            style={{
+              position: 'absolute',
+              top: 16,
+              right: 16,
+              pointerEvents: 'none',
+            }}
+          >
+            <div className="embed-display-guard__badge">
+              <span className="material-icons">visibility</span>
+              Zobrazovací režim
             </div>
-          ) : null}
+          </div>
         </div>
 
-        {showFallback ? (
+        {showFallback && (
           <div className="embed-fallback">
             <span>
-              {embed.renderMode === 'display'
-                ? 'Zobrazovaci rezim omezuje nektere interakce uvnitr stranky. Kdyz se embed nezobrazi spravne, otevri cilovou stranku primo.'
-                : 'Pokud se embed nezobrazi, otevri cilovou stranku primo.'}
+              Pokud se stránka nezobrazí správně, otevři ji přímo.
             </span>
-            <a href={embed.url} target="_blank" rel="noreferrer">
-              Otevrit stranku
+            <a href={embed.url} target="_blank">
+              Otevřít
             </a>
           </div>
-        ) : null}
+        )}
       </main>
     </>
   )
 }
 
 export async function getServerSideProps({ params, req, res, query }) {
-  res.setHeader(
-    'Cache-Control',
-    'private, no-store, no-cache, max-age=0, must-revalidate'
-  )
+  res.setHeader('Cache-Control', 'no-store')
 
   const embed = await getEmbedBySlug(params.slug, { includeSecrets: true })
 
-  if (!embed) {
-    res.statusCode = 404
-  }
+  if (!embed) res.statusCode = 404
 
-  const slug = params.slug
   const requiresPassword =
     Boolean(embed?.passwordHash) && !hasLinkAccess(req, embed.slug)
-  const error = Array.isArray(query.error) ? query.error[0] : query.error || ''
-  const isExpired =
-    Boolean(embed?.expiresAt) && new Date(embed.expiresAt).getTime() < Date.now()
-  const isDisabled = embed?.isEnabled === false
 
-  if (embed && !requiresPassword && !isExpired && !isDisabled) {
+  const error = Array.isArray(query.error) ? query.error[0] : query.error || ''
+
+  if (embed && !requiresPassword) {
     await incrementEmbedView(embed.slug)
   }
 
-  let lockedTitle = 'Tenhle odkaz je pod heslem'
-  let lockedDescription =
-    'Zadej heslo, ktere jsi dostal s odkazem. Po spravnem zadani se stranka otevre.'
-
-  if (isDisabled) {
-    lockedTitle = 'Tenhle odkaz je docasne vypnuty'
-    lockedDescription =
-      'Organizator ho docasne vypnul. Pokud ho potrebujes otevrit, pozadej o novou aktivni adresu.'
-  } else if (isExpired) {
-    lockedTitle = 'Tenhle odkaz uz expiroval'
-    lockedDescription =
-      'Platnost odkazu skoncila. Pokud ho potrebujes znovu, pozadej o novou aktualni adresu.'
-  }
-
-  if (embed?.passwordHash) {
-    delete embed.passwordHash
-  }
+  if (embed?.passwordHash) delete embed.passwordHash
 
   return {
     props: {
       embed,
-      slug,
-      requiresPassword: requiresPassword || isDisabled || isExpired,
+      slug: params.slug,
+      requiresPassword,
       error,
-      lockedTitle,
-      lockedDescription,
+      lockedTitle: 'Odkaz je pod heslem',
+      lockedDescription: 'Zadej heslo pro pokračování',
     },
   }
 }
